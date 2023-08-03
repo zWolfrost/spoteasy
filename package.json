@@ -1,0 +1,27 @@
+{
+  "name": "spoteasy",
+  "version": "1.0.0",
+  "description": "An easy-to-use zero-dependencies node.js wrapper for the Spotify API",
+  "main": "dist/spoteasy",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zWolfrost/spoteasy.git"
+  },
+  "author": "zWolfrost",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zWolfrost/spoteasy/issues"
+  },
+  "homepage": "https://github.com/zWolfrost/spoteasy#readme",
+  "keywords": [
+    "spotify",
+    "api",
+    "wrapper",
+    "easy",
+    "complete",
+    "full",
+    "authorization",
+    "code",
+    "token"
+  ]
+}
