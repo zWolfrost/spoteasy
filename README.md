@@ -5,14 +5,14 @@ All versions are written in node.js v18.17.0 and have no dependencies.
 
 Some of the most notable capabilities:
 - Fetching a Spotify Token in each one of the [four ways]((https://developer.spotify.com/documentation/web-api/concepts/authorization)) specified in the Spotify API documentation;
-- Generalized method to request ANYTHING from the api
+- Generalized method to request **anything** from the api
 - Token auto-refresh when expired
 
 
 &nbsp;
 ## How to use
 
-### Importing
+### Importing & Initialization
 ```js
 const SpotifyAPI = require("spoteasy");
 ```
@@ -70,7 +70,7 @@ console.log(response.tracks.items.map(items => items.name))
 
 &nbsp;
 ### [Authorization Code PKCE Flow](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
-Once again, let's follow the Spotify API documentation to [create a playlist](https://developer.spotify.com/documentation/web-api/reference/create-playlist) in a logged user's account. To do this, we have to make the user log in into his spotify account. The next examples will use the express.js library to do that. (note: they are very barebones implementations)
+Once again, let's follow the Spotify API documentation to [create a playlist](https://developer.spotify.com/documentation/web-api/reference/create-playlist) in a logged user's account. To do this, we have to make the user log in into his spotify account. The next examples will use the express.js library to do that. (Note: they are very barebones implementations. For a real implementation, you should attach a SpotifyAPI object to every user that makes a request)
 
 <img src="https://i.imgur.com/jqrXNCI.png" alt="Spotify Create Playlist Docs - Authorization Scopes" width="1000"/>
 
@@ -107,13 +107,16 @@ Now let's try to create a playlist in a logged user's account by following the S
 ```js
 app.get("/login", async (req, res) => {
 
-  if ("code" in req.query) {
+  // Checking if the auth code is in the URL query & if token is waiting to be resolved
+  if ("code" in req.query && "resolve" in spoteasy.token) { 
 
-    await spoteasy.resolveToken(req.query)
+    // Waiting for the token to resolve with the URL query
+    await spoteasy.resolveToken(req.query) 
   
     res.status(200).send({ info: "Login completed" })
   
-    let userID = "<User ID>" //The ID of the current user can be obtained via the Get Current User's Profile endpoint (/me)
+    // The ID of the current user can be obtained via the Get Current User's Profile endpoint (/me)
+    let userID = "<User ID>" 
   
     let request = {
       method: "POST",
@@ -127,9 +130,10 @@ app.get("/login", async (req, res) => {
     }
     let response = await spoteasy.request(request)
     
+    // Print out the url of the just created playlist
     console.log( response.external_urls.spotify )
-    // Prints out the url of the just created playlist
   }
+  // If user rejected the authentication request
   else if ("error" in req.query) {
     res.status(401).send({ error: "Login rejected" })
   }
@@ -142,17 +146,24 @@ app.get("/login", async (req, res) => {
 
 | Method                    | Description
 |:-:                        |:-
-| **new SpotifyAPI()**      | Creates a SpotifyAPI object with some optional settings passed as argument.
+| **new SpotifyAPI()**      | Creates a SpotifyAPI object with some optional settings passed as argument, such as "autoRefreshToken".
 | authorizationCodeFlow     | Uses the [Authorization code flow](https://developer.spotify.com/documentation/web-api/tutorials/code-flow) method to get an authorization token.
 | authorizationCodePKCEFlow | Uses the [Authorization code PKCE flow](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow) method to get an authorization token.
 | clientCredentialsFlow     | Uses the [Client credentials flow](https://developer.spotify.com/documentation/web-api/tutorials/client-credentials-flow) method to get an authorization token.
 | implicitGrantFlow         | Uses the [Implicit grant flow](https://developer.spotify.com/documentation/web-api/tutorials/implicit-flow) method to get an authorization token.
 | resolveToken              | This method has to be called after using a Grant Flow that gives you an authentication code in the URL query.
+| setToken                  | Sets the token with the provided properties.
 | refreshToken              | Tries to refresh the authorization token.
 | request                   | Make an API request to the spotify API with the given options.
-| parseURL                  | Extractes important information out of a Spotify URL (like type and id).
+| searchTrack               | Shorthand for fetching a "search for item" request with limit 1 and type track, then returning the first item.
+| (static) parseURL         | Extractes important information out of a Spotify URL (like type and id).
 
 &nbsp;
+# Changelog & Breaking Changes
+**Watch out for this section if you wish to migrate to a different version.** <br>
 
+- **v1.1.0**: Added searchTrack method, declaration file & bugfixes. Removed minified version.
+
+&nbsp;
 # Found a bug and/or need help?
 Please [open an issue](https://github.com/zWolfrost/spoteasy/issues) on Github to request a change, report a bug or ask for help about something and i will gladly look into it.
