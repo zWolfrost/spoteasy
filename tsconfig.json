@@ -1,0 +1,9 @@
+{
+   "files": ["dist/spoteasy.js"],
+   "compilerOptions": {
+     "allowJs": true,
+     "declaration": true,
+     "emitDeclarationOnly": true,
+     "declarationMap": true
+   }
+ }

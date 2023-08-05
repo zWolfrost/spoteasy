@@ -15,6 +15,22 @@ export = SpotifyAPI;
  */
 declare class SpotifyAPI {
     /**
+     * The "request" method default parser.
+     *
+     * If tracks are found, this parser will add a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
+     *
+     * Then it will also add some handy properties to every track in this array:
+     * @param authors An array of all the artists names;
+     * @param cover The track cover (points to the album cover if the track is part of one);
+     * @param query A string of relevant track words (title, artists and album) separated by a space
+     * @param title Same as query, but the relevant information is separated by relevant characters for displaying purposes, e.g. "Title - Artist1, Artist2 (Album)"
+     * @param url Shorthand for external_urls.spotify (the track's Spotify URL)
+     *
+     * @param  {Object} response
+     * @returns {Object} A parsed response
+     */
+    static tracksParser(...response: any): any;
+    /**
      * Extractes important information out of a Spotify URL
      * @param {String} url
      * @returns {Object<string>} An object that contains the url "hostname", its "query" as an object, the spotify item "type" and item "id"
@@ -91,7 +107,7 @@ declare class SpotifyAPI {
     /**
      * This method is not supposed to be used by itself!
      */
-    requestToken(request: any, properties: any): Promise<{}>;
+    requestToken(request: any): Promise<any>;
     /**
      * Sets the token with the provided properties
      * @returns {Object} Returns the SpotifyAPI object "token" property
@@ -132,7 +148,7 @@ declare class SpotifyAPI {
      * @param {String=} opts.method The request method
      * @param {Object=} opts.headers The request headers
      * @param {any=} opts.body The request body
-     * @param {Function=} opts.parser An optional parser function to pass the request result before returning
+     * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is {@link tracksParser}
      * @returns {Object} The request result
      */
     request({ url, location, endpoint, query, method, headers, body, parser }?: {

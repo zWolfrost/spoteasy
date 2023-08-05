@@ -33,7 +33,7 @@ await spoteasy.clientCredentialsFlow("<Client ID>", "<Client Secret>")
 
 Adds a "token" property to the "spoteasy" object. The "token" property contains an object with various useful properties, beyond the actual access token.
 
-Now let's try to fetch an album from the spotify API, following the same rules in their documentation:
+Now let's try to fetch an album from the Spotify API, following the same rules in [their documentation](https://developer.spotify.com/documentation/web-api/reference/get-an-album):
 
 <img src="https://i.imgur.com/8IcIyN3.png" width="1000"/>
 
@@ -156,14 +156,17 @@ app.get("/login", async (req, res) => {
 | refreshToken              | Tries to refresh the authorization token.
 | request                   | Make an API request to the spotify API with the given options.
 | searchTrack               | Shorthand for fetching a "search for item" request with limit 1 and type track, then returning the first item.
+| (static) tracksParser     | The "request" method default parser. Adds a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
 | (static) parseURL         | Extractes important information out of a Spotify URL (like type and id).
 
 &nbsp;
-# Changelog & Breaking Changes
+## Changelog & Breaking Changes
 **Watch out for this section if you wish to migrate to a different version.** <br>
 
-- **v1.1.0**: Added searchTrack method, declaration file & bugfixes. Removed minified version.
+- **v1.1.0**: Added "searchTrack" method, declaration file & bugfixes. Removed minified version.
+
+- **v1.2.0**: Added "tracksParser" parser, and placed it as the default parser of the "request" method.
 
 &nbsp;
-# Found a bug and/or need help?
+## Found a bug and/or need help?
 Please [open an issue](https://github.com/zWolfrost/spoteasy/issues) on Github to request a change, report a bug or ask for help about something and i will gladly look into it.
