@@ -369,11 +369,7 @@ class SpotifyAPI
 
       let searchResult = await this.request(searchRequest)
 
-      searchResult = Object.values(searchResult)[0].items
-
-      if (searchResult.length == 0) return null
-
-      return searchResult[0]
+      return searchResult.parsed_tracks?.[0] ?? null
    }
 
 

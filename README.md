@@ -188,6 +188,7 @@ app.get("/login", async (req, res) => {
 - **v1.2.0**: Added "tracksParser" parser, and placed it as the default parser of the "request" method.
 
 - **v1.3.0**: Added "precautionSeconds" option on constructor. Also added "refresh_timeout", "expires_now_in" and "auto_refresh" token properties.
+  - *v1.3.1*: Fixed bug where the "searchTrack" method wouldn't parse its track.
 
 
 &nbsp;
