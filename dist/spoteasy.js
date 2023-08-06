@@ -6,24 +6,31 @@
  * After a token has been created, this object will contain in addition to the settings provided in the constructor, a token object:
  *
  * @param {Object}  token - A SpotifyAPI token object
- * @param {String}  token.access_token  - The actual access token
- * @param {String}  token.token_type    - The token type (e.g. "Bearer")
- * @param {Number}  token.expires_in    - The amount of seconds that the token can be used for before it expires
- * @param {Number}  token.expires_in_ms - The amount of milliseconds that the token can be used for before it expires
- * @param {Number}  token.expire_time   - The Date.now() milliseconds on which the token will expire
- * @param {String}  token.scope         - A series of strings separated by a comma "," of the allowed authorization scopes
- * @param {Boolean} token.is_expired    - (Getter) Whether the token is expired
+ * @param {String}  token.access_token    - The actual access token
+ * @param {String}  token.token_type      - The token type (e.g. "Bearer")
+ * @param {Number}  token.expires_in      - The amount of seconds that the token can be used for before it expires, starting from its creation
+ * @param {Number}  token.expires_in_ms   - The amount of milliseconds that the token can be used for before it expires, starting from its creation
+ * @param {Number}  token.expire_time     - The Date.now() milliseconds on which the token will expire
+ * @param {String}  token.scope           - A series of strings separated by a comma "," of the allowed authorization scopes
+ * @param {Object}  token.refresh_timeout - The Timeout object of the auto refresh
+ * @param {Number}  token.expires_now_in  - (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
+ * @param {Boolean} token.is_expired      - (Getter) Whether the token is expired
+ * @param {Boolean} token.auto_refresh    - (Getter/Setter) Whether the token is going to automatically refresh when expired
+ * @param {String}  token.error             - If the token creation was unsuccessful, displays the type of error encountered
+ * @param {String}  token.error_description - If the token creation was unsuccessful, displays the description of the error encountered
  */
 class SpotifyAPI
 {
    /**
-    * Creates a SpotifyAPI object with the provided settings
-    * @param {Boolean} autoRefreshToken - The minefield width (1-based)
+    * Creates a SpotifyAPI object with the provided default settings
+    * @param {Boolean} autoRefreshToken Sets the token to auto-refresh when expired on its creation
+    * @param {Number} precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
     * @returns {SpotifyAPI} A SpotifyAPI object
     */
-   constructor({autoRefreshToken=true}={})
+   constructor({autoRefreshToken=true, precautionSeconds=5}={})
    {
       this.autoRefreshToken = autoRefreshToken
+      this.precautionSeconds = precautionSeconds
       this.token = {}
    }
 
@@ -200,7 +207,11 @@ class SpotifyAPI
     */
    async requestToken(request)
    {
-      return fetch("https://accounts.spotify.com/api/token", request).then(res => res.json())
+      let res = await fetch("https://accounts.spotify.com/api/token", request).then(res => res.json())
+
+      if ("error" in res) throw new Error(res.error_description ?? res.error.message)
+
+      return res
    }
 
    /**
@@ -209,18 +220,34 @@ class SpotifyAPI
     */
    setToken(properties)
    {
+      properties.expires_in -= this.precautionSeconds
+
       this.token = {
          ...properties,
 
          expires_in_ms: properties.expires_in*1000,
          expire_time: Date.now() + properties.expires_in*1000,
+         get expires_now_in() { return this.expire_time - Date.now() },
          get is_expired() { return Date.now() > this.expire_time },
+         get auto_refresh() { return Boolean(this.refresh_timeout) },
+         set auto_refresh(bool)
+         {
+            if (bool != this.auto_refresh)
+            {
+               if (bool)
+               {
+                  this.refresh_timeout = setTimeout(() => this?.refresh(), this.expires_now_in)
+               }
+               else
+               {
+                  clearTimeout(this.refresh_timeout)
+                  delete this.refresh_timeout
+               }
+            }
+         }
       }
 
-      if (this.autoRefreshToken && this.token.refresh)
-      {
-         setTimeout(() => this.refreshToken(), this.token.expires_in_ms)
-      }
+      if (this.autoRefreshToken) this.token.auto_refresh = true
 
       return this.token
    }
@@ -317,7 +344,7 @@ class SpotifyAPI
 
       let res = await fetch(reqURL, req).then(res => res.json())
 
-      if ("error" in res) throw new Error(res.error.message)
+      if ("error" in res) throw new Error(res.error_description ?? res.error.message)
 
       if (parser) return parser(res)
 

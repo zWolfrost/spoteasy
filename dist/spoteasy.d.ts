@@ -5,13 +5,18 @@ export = SpotifyAPI;
  * After a token has been created, this object will contain in addition to the settings provided in the constructor, a token object:
  *
  * @param {Object}  token - A SpotifyAPI token object
- * @param {String}  token.access_token  - The actual access token
- * @param {String}  token.token_type    - The token type (e.g. "Bearer")
- * @param {Number}  token.expires_in    - The amount of seconds that the token can be used for before it expires
- * @param {Number}  token.expires_in_ms - The amount of milliseconds that the token can be used for before it expires
- * @param {Number}  token.expire_time   - The Date.now() milliseconds on which the token will expire
- * @param {String}  token.scope         - A series of strings separated by a comma "," of the allowed authorization scopes
- * @param {Boolean} token.is_expired    - (Getter) Whether the token is expired
+ * @param {String}  token.access_token    - The actual access token
+ * @param {String}  token.token_type      - The token type (e.g. "Bearer")
+ * @param {Number}  token.expires_in      - The amount of seconds that the token can be used for before it expires, starting from its creation
+ * @param {Number}  token.expires_in_ms   - The amount of milliseconds that the token can be used for before it expires, starting from its creation
+ * @param {Number}  token.expire_time     - The Date.now() milliseconds on which the token will expire
+ * @param {String}  token.scope           - A series of strings separated by a comma "," of the allowed authorization scopes
+ * @param {Object}  token.refresh_timeout - The Timeout object of the auto refresh
+ * @param {Number}  token.expires_now_in  - (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
+ * @param {Boolean} token.is_expired      - (Getter) Whether the token is expired
+ * @param {Boolean} token.auto_refresh    - (Getter/Setter) Whether the token is going to automatically refresh when expired
+ * @param {String}  token.error             - If the token creation was unsuccessful, displays the type of error encountered
+ * @param {String}  token.error_description - If the token creation was unsuccessful, displays the description of the error encountered
  */
 declare class SpotifyAPI {
     /**
@@ -37,12 +42,17 @@ declare class SpotifyAPI {
      */
     static parseURL(url: string): any;
     /**
-     * Creates a SpotifyAPI object with the provided settings
-     * @param {Boolean} autoRefreshToken - The minefield width (1-based)
+     * Creates a SpotifyAPI object with the provided default settings
+     * @param {Boolean} autoRefreshToken Sets the token to auto-refresh when expired on its creation
+     * @param {Number} precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
      * @returns {SpotifyAPI} A SpotifyAPI object
      */
-    constructor({ autoRefreshToken }?: {autoRefreshToken: boolean});
+    constructor({ autoRefreshToken, precautionSeconds }?: {
+        autoRefreshToken: boolean,
+        precautionSeconds: Number
+    });
     autoRefreshToken: any;
+    precautionSeconds: any;
     token: {};
     /**
      * Uses the {@link https://developer.spotify.com/documentation/web-api/tutorials/code-flow Authorization code flow} to get an URL to the Spotify Login page

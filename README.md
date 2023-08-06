@@ -68,6 +68,7 @@ console.log(response.tracks.items.map(items => items.name))
 */
 ```
 
+
 &nbsp;
 ### [Authorization Code PKCE Flow](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
 Once again, let's follow the Spotify API documentation to [create a playlist](https://developer.spotify.com/documentation/web-api/reference/create-playlist) in a logged user's account. To do this, we have to make the user log in into his spotify account. The next examples will use the express.js library to do that. (Note: they are very barebones implementations. For a real implementation, you should attach a SpotifyAPI object to every user that makes a request)
@@ -159,6 +160,25 @@ app.get("/login", async (req, res) => {
 | (static) tracksParser     | The "request" method default parser. Adds a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
 | (static) parseURL         | Extractes important information out of a Spotify URL (like type and id).
 
+
+&nbsp;
+## SpotifyAPI "token" properties
+*These are the properties that the token object might have during or after its creation with one of the 4 methods*
+
+| Property          | Description
+|:-:                |:-
+| access_token      | The actual access token
+| token_type        | The token type (e.g. "Bearer")
+| expires_in        | The amount of seconds that the token can be used for before it expires, starting from its creation
+| expires_in_ms     | The amount of milliseconds that the token can be used for before it expires, starting from its creation
+| expire_time       | The Date.now() milliseconds on which the token will expire
+| scope             | A series of strings separated by a comma "," of the allowed authorization scopes
+| refresh_timeout   | The Timeout object of the auto refresh
+| expires_now_in    | (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
+| is_expired        | (Getter) Whether the token is expired
+| auto_refresh      | (Getter/Setter) Whether the token is going to automatically refresh when expired
+
+
 &nbsp;
 ## Changelog & Breaking Changes
 **Watch out for this section if you wish to migrate to a different version.** <br>
@@ -166,6 +186,9 @@ app.get("/login", async (req, res) => {
 - **v1.1.0**: Added "searchTrack" method, declaration file & bugfixes. Removed minified version.
 
 - **v1.2.0**: Added "tracksParser" parser, and placed it as the default parser of the "request" method.
+
+- **v1.3.0**: Added "precautionSeconds" option on constructor. Also added "refresh_timeout", "expires_now_in" and "auto_refresh" token properties.
+
 
 &nbsp;
 ## Found a bug and/or need help?
