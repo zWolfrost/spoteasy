@@ -62,12 +62,12 @@ function parseTrackObject(track)
       album: {
          ...track.album,
 
-         artists: parseArtistsObject(track.album.artists),
+         artists: parseArtistsObject(track.album.artists) ?? [{name: track.album.publisher}],
          authors: getAuthors(track.album.artists) ?? [track.album.publisher],
          url: track.album.external_urls.spotify,
       },
 
-      artists: parseArtistsObject(track.artists),
+      artists: parseArtistsObject(track.artists) ?? [{name: track.album.publisher}],
       authors: getAuthors(track.artists) ?? [track.album.publisher],
 
       cover: track.images ?? track.album.images,
@@ -91,5 +91,6 @@ function getAuthors(artists)
 {
    return artists?.map(art => art.name)
 }
+
 
 module.exports = tracksParser

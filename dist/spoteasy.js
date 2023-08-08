@@ -196,7 +196,7 @@ class SpotifyAPI
    {
       this.token.resolve = this.setToken
 
-      return this.token.url = this.constructor.getAuthURL("token", clientID, redirectURI, {scope: scope, show_dialog: show_dialog})
+      return this.token.url = SpotifyAPI.getAuthURL("token", clientID, redirectURI, {scope: scope, show_dialog: show_dialog})
    }
 
 
@@ -327,11 +327,11 @@ class SpotifyAPI
     * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is {@link tracksParser}
     * @returns {Object} The request result
     */
-   async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined, parser=this.constructor.tracksParser} )
+   async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined, parser=SpotifyAPI.tracksParser} )
    {
       if (url)
       {
-         endpoint = this.constructor.parseURL(url).endpoint + endpoint
+         endpoint = SpotifyAPI.parseURL(url).endpoint + endpoint
       }
 
       let reqURL = `${location}${endpoint}?${queryFromObject(query)}`
@@ -376,18 +376,17 @@ class SpotifyAPI
    /* RESPONSE PARSERS */
 
    /**
-    * The "request" method default parser.
+    * The "{@link request}" method default parser.
     *
     * If tracks are found, this parser will add a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
     *
     * Then it will also add some handy properties to every track in this array:
-    * @param authors An array of all the artists names;
+    * @param authors An array of all the artists' names;
     * @param cover The track cover (points to the album cover if the track is part of one);
-    * @param query A string of relevant track words (title, artists and album) separated by a space
+    * @param query A string of relevant track words (title, artists and album) separated by a space for searching purposes
     * @param title Same as query, but the relevant information is separated by relevant characters for displaying purposes, e.g. "Title - Artist1, Artist2 (Album)"
     * @param url Shorthand for external_urls.spotify (the track's Spotify URL)
     *
-    * @param  {Object} response
     * @returns {Object} A parsed response
     */
    static tracksParser(...response)
@@ -455,6 +454,25 @@ class SpotifyAPI
 
       return parsed
    }
+
+   /**
+    * Returns true if a given string is a valid Spotify URL
+    * @param {String} string The string to verify
+    * @returns {Boolean} Whether the passed string is a valid Spotify URL
+    */
+   static isValidURL(string)
+   {
+      try
+      {
+         SpotifyAPI.parseURL(string)
+      }
+      catch
+      {
+         return false
+      }
+
+      return true
+   }
 }
 
 function generateRandomString(length)
@@ -506,5 +524,6 @@ function objectFromQuery(query)
 {
    return Object.fromEntries(new URLSearchParams(query).entries());
 }
+
 
 module.exports = SpotifyAPI

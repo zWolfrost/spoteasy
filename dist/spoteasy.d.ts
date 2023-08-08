@@ -20,27 +20,32 @@ export = SpotifyAPI;
  */
 declare class SpotifyAPI {
     /**
-     * The "request" method default parser.
+     * The "{@link request}" method default parser.
      *
      * If tracks are found, this parser will add a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
      *
      * Then it will also add some handy properties to every track in this array:
-     * @param authors An array of all the artists names;
+     * @param authors An array of all the artists' names;
      * @param cover The track cover (points to the album cover if the track is part of one);
-     * @param query A string of relevant track words (title, artists and album) separated by a space
+     * @param query A string of relevant track words (title, artists and album) separated by a space for searching purposes
      * @param title Same as query, but the relevant information is separated by relevant characters for displaying purposes, e.g. "Title - Artist1, Artist2 (Album)"
      * @param url Shorthand for external_urls.spotify (the track's Spotify URL)
      *
-     * @param  {Object} response
      * @returns {Object} A parsed response
      */
-    static tracksParser(...response: any): any;
+    static tracksParser(...response: any[]): any;
     /**
      * Extractes important information out of a Spotify URL
      * @param {String} url
      * @returns {Object<string>} An object that contains the url "hostname", its "query" as an object, the spotify item "type" and item "id"
      */
     static parseURL(url: string): any;
+    /**
+     * Returns true if a given string is a valid Spotify URL
+     * @param {String} string The string to verify
+     * @returns {Boolean} Whether the passed string is a valid Spotify URL
+     */
+    static isValidURL(string: string): boolean;
     /**
      * Creates a SpotifyAPI object with the provided default settings
      * @param {Boolean} autoRefreshToken Sets the token to auto-refresh when expired on its creation

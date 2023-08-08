@@ -159,6 +159,7 @@ app.get("/login", async (req, res) => {
 | searchTrack               | Shorthand for fetching a "search for item" request with limit 1 and type track, then returning the first item.
 | (static) tracksParser     | The "request" method default parser. Adds a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
 | (static) parseURL         | Extractes important information out of a Spotify URL (like type and id).
+| (static) isValidURL       | Returns true if a given string is a valid Spotify URL.
 
 
 &nbsp;
@@ -189,6 +190,8 @@ app.get("/login", async (req, res) => {
 
 - **v1.3.0**: Added "precautionSeconds" option on constructor. Also added "refresh_timeout", "expires_now_in" and "auto_refresh" token properties.
   - *v1.3.1*: Fixed bug where the "searchTrack" method wouldn't parse its track.
+
+- **v1.4.0**: Added "isValidURL" method. Fixed trackParser bug regarding episodes.
 
 
 &nbsp;
