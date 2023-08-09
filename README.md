@@ -5,8 +5,8 @@ All versions are written in node.js v18.17.0 and have no dependencies.
 
 Some of the most notable capabilities:
 - Fetching a Spotify Token in each one of the [four ways]((https://developer.spotify.com/documentation/web-api/concepts/authorization)) specified in the Spotify API documentation;
-- Generalized method to request **anything** from the api
-- Token auto-refresh when expired
+- Simple & documented methods to request **anything** from the api;
+- Access token **auto-refreshing**
 
 
 &nbsp;
@@ -33,21 +33,16 @@ await spoteasy.clientCredentialsFlow("<Client ID>", "<Client Secret>")
 
 Adds a "token" property to the "spoteasy" object. The "token" property contains an object with various useful properties, beyond the actual access token.
 
-Now let's try to fetch an album from the Spotify API, following the same rules in [their documentation](https://developer.spotify.com/documentation/web-api/reference/get-an-album):
-
-<img src="https://i.imgur.com/8IcIyN3.png" width="1000"/>
+Now let's try to fetch an album from the Spotify API.
 
 ```js
-let request = {
-  method: "GET",
-  url: "https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ?si=4f75fc27072949c2",
-  query: {
-    market: "US"
-  }
-}
+
 //the url gets parsed into the endpoint "/albums/6PFPjumGRpZnBzqnDci6qJ"
 
-let response = await spoteasy.request(request)
+let albumURL = "https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ?si=4f75fc27072949c2"
+let albumID = SpotifyAPI.parseURL(albumURL).id
+
+let response = await spoteasy.getAlbum(albumID)
 
 console.log(response.tracks.items.map(items => items.name))
 /*
@@ -71,11 +66,12 @@ console.log(response.tracks.items.map(items => items.name))
 
 &nbsp;
 ### [Authorization Code PKCE Flow](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
-Once again, let's follow the Spotify API documentation to [create a playlist](https://developer.spotify.com/documentation/web-api/reference/create-playlist) in a logged user's account. To do this, we have to make the user log in into his spotify account. The next examples will use the express.js library to do that. (Note: they are very barebones implementations. For a real implementation, you should attach a SpotifyAPI object to every user that makes a request)
+Now let's create a playlist in a logged user's account. To do this, we have to make the user log in into his spotify account. The next examples will use the express.js library to do that.
+(Note: they are very barebones implementations, useful only for explanation purposes.)
 
 <img src="https://i.imgur.com/jqrXNCI.png" alt="Spotify Create Playlist Docs - Authorization Scopes" width="1000"/>
 
-As you can see, it's stated that to do that we need two [authorization scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes): "playlist-modify-public" and "playlist-modify-private". We can pass them as arguments in the authorization code PKCE method, like any other token creation method (except for client credentials).
+As you can see (and can also be seen from the JSDOC documentation), it's stated that to do that we need two [authorization scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes): "playlist-modify-public" and "playlist-modify-private". We can pass them as arguments in the authorization code PKCE method, like any other token creation method (except for client credentials).
 
 ```js
 const SpotifyAPI = require("spoteasy")
@@ -91,46 +87,33 @@ app.get("/auth", async (req, res) => {
     }
   )
 
+  //This will redirect the user to the Spotify login page, where they can log in
   res.redirect(200, url)
 })
 ```
-
-This will redirect the user to the Spotify login page
-
 Once the user has logged in, they will be redirected again to the specified "Redirect URL" parameter with a code in the url query, which needs to be passed as an argument to the "resolveToken" method.
 
-Finally, calling the "resolveToken" method will create an access token in the "spoteasy" object.
-
-Now let's try to create a playlist in a logged user's account by following the Spotify API documentation:
-
-<img src="https://i.imgur.com/G9YvoZF.png" width="1000"/>
-
+Finally, (as you will see in the next piece of code) calling the "resolveToken" method with the URL query as argument will create an access token in the "spoteasy" object, enabling us to easily create a playlist.
 ```js
 app.get("/login", async (req, res) => {
 
   // Checking if the auth code is in the URL query & if token is waiting to be resolved
-  if ("code" in req.query && "resolve" in spoteasy.token) { 
+  if ("code" in req.query && "resolve" in spoteasy.token) {
 
     // Waiting for the token to resolve with the URL query
-    await spoteasy.resolveToken(req.query) 
-  
+    await spoteasy.resolveToken(req.query)
+
     res.status(200).send({ info: "Login completed" })
-  
-    // The ID of the current user can be obtained via the Get Current User's Profile endpoint (/me)
-    let userID = "<User ID>" 
-  
-    let request = {
-      method: "POST",
-      endpoint: `/users/${userID}/playlists`,
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        name: "Hello World",
-        public: false,
-        description: "Your coolest playlist"
-      })
-    }
-    let response = await spoteasy.request(request)
-    
+
+    // The ID of the current user can be obtained via the Get Current User's Profile endpoint
+    let currentUser = await spoteasy.getCurrentUserProfile()
+
+    let response = await spoteasy.createPlaylist(currentUser.id, {
+      name: "Hello World",
+      public: false,
+      description: "Your coolest playlist"
+    })
+
     // Print out the url of the just created playlist
     console.log( response.external_urls.spotify )
   }
@@ -142,8 +125,8 @@ app.get("/login", async (req, res) => {
 ```
 
 &nbsp;
-## SpotifyAPI Object Methods
-*Note that the methods and parameters are fully documented in the JSDOC methods comments*
+## SpotifyAPI Object Main Methods
+**Note that the methods and parameters are fully documented in the JSDOC methods comments*
 
 | Method                    | Description
 |:-:                        |:-
@@ -160,6 +143,7 @@ app.get("/login", async (req, res) => {
 | (static) tracksParser     | The "request" method default parser. Adds a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
 | (static) parseURL         | Extractes important information out of a Spotify URL (like type and id).
 | (static) isValidURL       | Returns true if a given string is a valid Spotify URL.
+| ...other...               | getArtistTopTracks, followPlaylist, getPlaybackState... There is a method for every SpotifyAPI endpoint, fully documented in JSDOC.
 
 
 &nbsp;
@@ -184,15 +168,26 @@ app.get("/login", async (req, res) => {
 ## Changelog & Breaking Changes
 **Watch out for this section if you wish to migrate to a different version.** <br>
 
-- **v1.1.0**: Added "searchTrack" method, declaration file & bugfixes. Removed minified version.
+- **v1.1.0**:
+<br>- Added "searchTrack" method
+<br>- Added declaration file.
+<br>- Removed minified version.
 
-- **v1.2.0**: Added "tracksParser" parser, and placed it as the default parser of the "request" method.
+- **v1.2.0**:
+<br>- Added "tracksParser" parser, and placed it as the default parser of the "request" method.
 
-- **v1.3.0**: Added "precautionSeconds" option on constructor. Also added "refresh_timeout", "expires_now_in" and "auto_refresh" token properties.
-  - *v1.3.1*: Fixed bug where the "searchTrack" method wouldn't parse its track.
+- **v1.3.0**:
+<br>- Added "precautionSeconds" option on constructor.
+<br>- Added "refresh_timeout", "expires_now_in" and "auto_refresh" token properties.
 
-- **v1.4.0**: Added "isValidURL" method. Fixed trackParser bug regarding episodes.
+- **v1.4.0**
+<br>- Added "isValidURL" method.
+<br>- Fixed trackParser bug regarding episodes.
 
+- **v1.5.0**:
+<br>- Added a shorthand for every SpotifyAPI endpoint as of this version upload date.
+<br>- Added a "defaultMarket" option on constructor.
+<br>- Fixed a bug where an empty response would throw an Exception.
 
 &nbsp;
 ## Found a bug and/or need help?

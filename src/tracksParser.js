@@ -62,20 +62,20 @@ function parseTrackObject(track)
       album: {
          ...track.album,
 
-         artists: parseArtistsObject(track.album.artists) ?? [{name: track.album.publisher}],
-         authors: getAuthors(track.album.artists) ?? [track.album.publisher],
-         url: track.album.external_urls.spotify,
+         artists: parseArtistsObject(track.album?.artists) ?? [{name: track.album?.publisher}],
+         authors: getAuthors(track.album?.artists) ?? [track.album?.publisher],
+         url: track.album?.external_urls.spotify,
       },
 
-      artists: parseArtistsObject(track.artists) ?? [{name: track.album.publisher}],
-      authors: getAuthors(track.artists) ?? [track.album.publisher],
+      artists: parseArtistsObject(track.artists) ?? [{name: track.album?.publisher}],
+      authors: getAuthors(track.artists) ?? [track.album?.publisher],
 
-      cover: track.images ?? track.album.images,
+      cover: track.images ?? track.album?.images,
       url: track.external_urls.spotify,
    }
 
-   info.query = `${track.name} ${info.authors.join(" ")} ${track.album.name}`;
-   info.title = `${track.name} - ${info.authors.join(", ")} (${track.album.name})`;
+   info.query = `${track.name} ${info.authors.join(" ")} ${track.album?.name}`;
+   info.title = `${track.name} - ${info.authors.join(", ")} (${track.album?.name})`;
 
    return info
 }

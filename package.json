@@ -1,8 +1,8 @@
 {
   "name": "spoteasy",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "An easy-to-use zero-dependencies node.js wrapper for the Spotify API",
-  "main": "dist/spoteasy",
+  "main": "src/spoteasy",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/zWolfrost/spoteasy.git"
