@@ -476,13 +476,15 @@ class SpotifyAPI
 
 
 
+   /* SHORTHANDS */
+
    /* ALBUM SHORTHANDS */
 
    /**
     * Get Spotify catalog information for a single album.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-album Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID of the album.
+    * @param {String} id The Spotify URL or ID of the album.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} An album.
@@ -490,7 +492,7 @@ class SpotifyAPI
    getAlbum(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/albums/${id}`,
+         method: "GET", endpoint: `/albums/${parseIDs(id)}`,
          query: { market: market }
       })
    }
@@ -499,7 +501,7 @@ class SpotifyAPI
     * Get Spotify catalog information for multiple albums identified by their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-albums Spotify API Reference}.
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the albums. Maximum: 20 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A set of albums.
@@ -508,7 +510,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/albums`,
-         query: { ids: ids?.join?.(",") ?? ids, market: market }
+         query: { ids: parseIDs(ids), market: market }
       })
    }
 
@@ -516,7 +518,7 @@ class SpotifyAPI
     * Get Spotify catalog information about an album's tracks.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-albums-tracks Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID of the album.
+    * @param {String} idThe Spotify URL or ID of the album.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
@@ -526,7 +528,7 @@ class SpotifyAPI
    getAlbumTracks(id, { market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/albums/${id}/tracks`,
+         method: "GET", endpoint: `/albums/${parseIDs(id)}/tracks`,
          query: { market: market, limit: limit, offset: offset }
       })
    }
@@ -559,14 +561,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the albums. Maximum: 20 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
     * @returns The album is saved.
     */
    saveAlbumsforCurrentUser(ids)
    {
       return this.request({
          method: "PUT", endpoint: `/me/albums`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -577,14 +579,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the albums. Maximum: 20 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
     * @returns Album(s) have been removed from the library.
     */
    removeUserSavedAlbums(ids)
    {
       return this.request({
          method: "DELETE", endpoint: `/me/albums`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -595,14 +597,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the albums. Maximum: 20 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
     * @returns {Array<Boolean>} Array of booleans.
     */
    checkUserSavedAlbums(ids)
    {
       return this.request({
          method: "GET", endpoint: `/me/albums/contains`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -631,13 +633,13 @@ class SpotifyAPI
     * Get Spotify catalog information for a single artist identified by their unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artist Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID of the artist.
+    * @param {String} id The Spotify URL or ID of the artist.
     * @returns {Object} An artist.
     */
    getArtist(id)
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${id}`
+         method: "GET", endpoint: `/artists/${parseIDs(id)}`
       })
    }
 
@@ -645,14 +647,14 @@ class SpotifyAPI
     * Get Spotify catalog information for several artists based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-artists Spotify API Reference}.
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the artists. Maximum: 20 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the artists. Maximum: 20 IDs.
     * @returns {Object} A set of artists.
     */
    getSeveralArtists(ids)
    {
       return this.request({
          method: "GET", endpoint: `/artists`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -660,7 +662,7 @@ class SpotifyAPI
     * Get Spotify catalog information about an artist's albums.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-albums Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID of the artist.
+    * @param {String} id The Spotify URL or ID of the artist.
     * @param {Object} opts Optional settings
     * @param {Array<String>} opts.include_groups A single string or an array of keywords that will be used to filter the response. If not supplied, all album types will be returned.
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
@@ -671,7 +673,7 @@ class SpotifyAPI
    getArtistAlbums(id, { include_groups, market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${id}/albums`,
+         method: "GET", endpoint: `/artists/${parseIDs(id)}/albums`,
          query: {include_groups: include_groups?.join?.(",") ?? include_groups, market: market, limit: limit, offset: offset }
       })
    }
@@ -680,7 +682,7 @@ class SpotifyAPI
     * Get Spotify catalog information about an artist's top tracks by country.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-top-tracks Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID of the artist.
+    * @param {String} id The Spotify URL or ID of the artist.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A set of tracks.
@@ -688,7 +690,7 @@ class SpotifyAPI
    getArtistTopTracks(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${id}/top-tracks`,
+         method: "GET", endpoint: `/artists/${parseIDs(id)}/top-tracks`,
          query: { market: market }
       })
    }
@@ -697,13 +699,13 @@ class SpotifyAPI
     * Get Spotify catalog information about artists similar to a given artist. Similarity is based on analysis of the Spotify community's listening history.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-related-artists Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID of the artist.
+    * @param {String} id The Spotify URL or ID of the artist.
     * @returns {Object} A set of artists.
     */
    getArtistRelatedArtists(id)
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${id}/related-artists`
+         method: "GET", endpoint: `/artists/${parseIDs(id)}/related-artists`
       })
    }
 
@@ -714,7 +716,7 @@ class SpotifyAPI
     * Get Spotify catalog information for a single audiobook. Note: Audiobooks are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-audiobook Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the audiobook.
+    * @param {String} id The Spotify URL or ID for the audiobook.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} An Audiobook.
@@ -722,7 +724,7 @@ class SpotifyAPI
    getAudiobook(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/audiobooks/${id}`,
+         method: "GET", endpoint: `/audiobooks/${parseIDs(id)}`,
          query: { market: market }
       })
    }
@@ -731,7 +733,7 @@ class SpotifyAPI
     * Get Spotify catalog information for several audiobooks identified by their Spotify IDs. Note: Audiobooks are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-audiobooks Spotify API Reference}.
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A set of audiobooks.
@@ -740,7 +742,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/audiobooks`,
-         query: { ids: ids?.join?.(",") ?? ids, market: market }
+         query: { ids: parseIDs(ids), market: market }
       })
    }
 
@@ -748,7 +750,7 @@ class SpotifyAPI
     * Get Spotify catalog information about an audiobook's chapters. Note: Audiobooks are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-audiobook-chapters Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the audiobook.
+    * @param {String} id The Spotify URL or ID for the audiobook.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
@@ -758,7 +760,7 @@ class SpotifyAPI
    getAudiobookChapters(id, { market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/audiobooks/${id}/chapters`,
+         method: "GET", endpoint: `/audiobooks/${parseIDs(id)}/chapters`,
          query: { market: market, limit: limit, offset: offset }
       })
    }
@@ -790,14 +792,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns Audiobook(s) are saved to the library.
     */
    saveAudiobooksForCurrentUser(ids)
    {
       return this.request({
          method: "PUT", endpoint: `/me/audiobooks`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -808,14 +810,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns Audiobook(s) have been removed from the library.
     */
    removeUserSavedAudiobooks(ids)
    {
       return this.request({
          method: "DELETE", endpoint: `/me/audiobooks`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -826,14 +828,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns {Array<Boolean>} Array of booleans.
     */
    checkUserSavedAudiobooks(ids)
    {
       return this.request({
          method: "GET", endpoint: `/me/audiobooks/contains`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -884,7 +886,7 @@ class SpotifyAPI
     * Get Spotify catalog information for a single chapter. Note: Chapters are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-chapter Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the chapter.
+    * @param {String} id The Spotify URL or ID for the chapter.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A Chapter.
@@ -892,7 +894,7 @@ class SpotifyAPI
    getChapter(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/chapters/${id}`,
+         method: "GET", endpoint: `/chapters/${parseIDs(id)}`,
          query: { market: market }
       })
    }
@@ -901,7 +903,7 @@ class SpotifyAPI
     * Get Spotify catalog information for several chapters identified by their Spotify IDs. Note: Chapters are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-chapters Spotify API Reference}.
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A set of chapters.
@@ -910,7 +912,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/chapters`,
-         query: { ids: ids?.join?.(",") ?? ids, market: market }
+         query: { ids: parseIDs(ids) ?? ids, market: market }
       })
    }
 
@@ -924,7 +926,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-position"
     *
-    * @param {String} id The Spotify ID for the episode.
+    * @param {String} id The Spotify URL or ID for the episode.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} An episode.
@@ -932,7 +934,7 @@ class SpotifyAPI
    getEpisode(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/episodes/${id}`,
+         method: "GET", endpoint: `/episodes/${parseIDs(id)}`,
          query: { market: market }
       })
    }
@@ -944,7 +946,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-position"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the episodes. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the episodes. Maximum: 50 IDs.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A set of episodes.
@@ -953,7 +955,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/episodes`,
-         query: { ids: ids?.join?.(",") ?? ids, market: market }
+         query: { ids: parseIDs(ids), market: market }
       })
    }
 
@@ -986,14 +988,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns Episode saved.
     */
    saveEpisodesForCurrentUser(ids)
    {
       return this.request({
          method: "PUT", endpoint: `/me/episodes`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1004,14 +1006,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns Episode removed.
     */
    removeEpisodesForCurrentUser(ids)
    {
       return this.request({
          method: "DELETE", endpoint: `/me/episodes`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1022,14 +1024,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns {Array<Boolean>} Array of booleans.
     */
    checkEpisodesForCurrentUser(ids)
    {
       return this.request({
          method: "GET", endpoint: `/me/episodes/contains`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1154,7 +1156,7 @@ class SpotifyAPI
     * @param {Object} opts Optional settings
     * @param {String} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @param {String} opts.context_uri Spotify URI of the context to play. Valid contexts are albums, artists & playlists.
-    * @param {Array<String>} opts.uris An array of the Spotify track URIs to play.
+    * @param {Array<String>} opts.uris A string or an array of the Spotify track URIs to play.
     * @param {Object<Number, String>} opts.offset Indicates from where in the context playback should start. Only available when context_uri corresponds to an album or playlist object "position" is zero based and can't be negative.
     * @param {Number} opts.position_ms The position in ms.
     * @returns Playback started.
@@ -1164,7 +1166,7 @@ class SpotifyAPI
       return this.request({
          method: "PUT", endpoint: `/me/player/play`,
          query: { device_id: device_id },
-         body: { context_uri: context_uri, uris: JSON.stringify(uris), offset: offset, position_ms: position_ms }
+         body: { context_uri: context_uri, uris: JSON.stringify([uris].flat()), offset: offset, position_ms: position_ms }
       })
    }
 
@@ -1356,6 +1358,12 @@ class SpotifyAPI
     */
    addItemToPlaybackQueue(uri, { device_id } = {})
    {
+      try
+      {
+         uri = SpotifyAPI.parseURL(uri).uri
+      }
+      catch {}
+
       return this.request({
          method: "POST", endpoint: `/me/player/queue`,
          query: { uri: uri, device_id: device_id }
@@ -1369,7 +1377,7 @@ class SpotifyAPI
     * Get a playlist owned by a Spotify user.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-playlist Spotify API Reference}.
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Array<String>} opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
@@ -1379,7 +1387,7 @@ class SpotifyAPI
    getPlaylist(playlist_id, { market=this.defaultMarket, fields, additional_types } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${playlist_id}`,
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}`,
          query: { market: market, fields: fields?.join?.(",") ?? fields, additional_types: additional_types?.join?.(",") ?? additional_types }
       })
    }
@@ -1392,7 +1400,7 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {Object} opts Optional settings
     * @param {String} opts.name The new name for the playlist.
     * @param {String} opts.public_playlist Whether the playlist will be public.
@@ -1403,7 +1411,7 @@ class SpotifyAPI
    changePlaylistDetails(playlist_id, { name, public_playlist, collaborative, description } = {})
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${playlist_id}`,
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}`,
          query: { name: name, public_playlist: public_playlist, collaborative: collaborative, description: description }
       })
    }
@@ -1415,7 +1423,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "playlist-read-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Array<String>} opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
@@ -1427,7 +1435,7 @@ class SpotifyAPI
    getPlaylistItems(playlist_id, { market=this.defaultMarket, fields, limit, offset, additional_types } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${playlist_id}/tracks`,
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
          query: { market: market, fields: fields?.join?.(",") ?? fields, limit: limit, offset: offset, additional_types: additional_types?.join?.(",") ?? additional_types }
       })
    }
@@ -1440,9 +1448,9 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {Object} opts Optional settings
-    * @param {Array<String>} opts.uris A single string or an array of Spotify URIs to set, can be track or episode URIs.
+    * @param {Array<String>} opts.uris A single string or an array of Spotify URLs or URIs to set, can be track or episode URIs.
     * @param {Number} opts.range_start The position of the first item to be reordered.
     * @param {Number} opts.insert_before The position where the items should be inserted. To reorder the items to the end of the playlist, simply set insert_before to the position after the last item.
     * @param {Number} opts.range_length The amount of items to be reordered. Defaults to 1 if not set. The range of items to be reordered begins from the range_start position, and includes the range_length subsequent items.
@@ -1452,8 +1460,8 @@ class SpotifyAPI
    updatePlaylistItems(playlist_id, { uris, range_start, insert_before, range_length, snapshot_id } = {})
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${playlist_id}/tracks`,
-         query: { uris: uris?.join?.(",") ?? uris },
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
+         query: { uris: parseURIs(uris) },
          body: { range_start: range_start, insert_before: insert_before, range_length: range_length, snapshot_id: snapshot_id }
       })
    }
@@ -1466,17 +1474,17 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {Object} opts Optional settings
     * @param {Number} opts.position The position to insert the items, a zero-based index. If omitted, the items will be appended to the playlist.
-    * @param {Array<String>} opts.uris A single string or an array of Spotify URIs to add, can be track or episode URIs.
+    * @param {Array<String>} opts.uris A single string or an array of Spotify URLs or URIs to add, can be track or episode URIs.
     * @returns {Object} A snapshot ID for the playlist.
     */
    addItemsToPlaylist(playlist_id, { position, uris } = {})
    {
       return this.request({
-         method: "POST", endpoint: `/playlists/${playlist_id}/tracks`,
-         query: { position: position, uris: uris?.join?.(",") ?? uris }
+         method: "POST", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
+         query: { position: position, uris: parseURIs(uris) }
       })
    }
 
@@ -1488,17 +1496,17 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {Object} opts Optional settings
-    * @param {Array<Object>} opts.tracks An array of objects containing Spotify URIs of the tracks or episodes to remove.
+    * @param {Array<Object>} opts.tracks An object or an array of objects containing Spotify URIs of the tracks or episodes to remove.
     * @param {String} opts.snapshot_id The playlist's snapshot ID against which you want to make the changes.
     * @returns {Object} A snapshot ID for the playlist.
     */
    removePlaylistItems(playlist_id, { tracks, snapshot_id } = {})
    {
       return this.request({
-         method: "DELETE", endpoint: `/playlists/${playlist_id}/tracks`,
-         query: { tracks: tracks, snapshot_id: snapshot_id }
+         method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
+         query: { tracks: [tracks].flat(), snapshot_id: snapshot_id }
       })
    }
 
@@ -1530,7 +1538,7 @@ class SpotifyAPI
     * - "playlist-read-private"
     * - "playlist-read-collaborative"
     *
-    * @param {Number} user_id The user's Spotify user ID.
+    * @param {Number} user_id The user's Spotify user URL or ID.
     * @param {Object} opts Optional settings
     * @param {Number} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number} opts.offset The index of the first playlist to return. Default: 0 (the first object). Maximum offset: 100.000. Use with limit to get the next set of playlists.
@@ -1539,7 +1547,7 @@ class SpotifyAPI
    getUserPlaylist(user_id, { limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/users/${user_id}/playlists`,
+         method: "GET", endpoint: `/users/${parseIDs(user_id)}/playlists`,
          query: { limit: limit, offset: offset }
       })
    }
@@ -1552,7 +1560,7 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} user_id The user's Spotify user ID.
+    * @param {String} user_id The user's Spotify user URL or ID.
     * @param {Object} opts Optional settings
     * @param {String} opts.name The name for the new playlist. This name does not need to be unique; a user may have several playlists with the same name.
     * @param {Boolean} opts.public_playlist Whether the playlist will be public.
@@ -1563,7 +1571,7 @@ class SpotifyAPI
    createPlaylist(user_id, { name, public_playlist, collaborative, description } = {})
    {
       return this.request({
-         method: "POST", endpoint: `/users/${user_id}/playlists`,
+         method: "POST", endpoint: `/users/${parseIDs(user_id)}/playlists`,
          body: { name: name, public_playlist: public_playlist, collaborative: collaborative, description: description }
       })
    }
@@ -1592,7 +1600,7 @@ class SpotifyAPI
     * Get a list of Spotify playlists tagged with a particular category.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-categories-playlists Spotify API Reference}.
     *
-    * @param {String} category_id The Spotify category ID for the category.
+    * @param {String} category_id The Spotify category URL or ID for the category.
     * @param {Object} opts Optional settings
     * @param {String} opts.country An ISO 3166-1 alpha-2 country code.
     * @param {Number} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
@@ -1602,7 +1610,7 @@ class SpotifyAPI
    getCategoryPlaylists(category_id, { country, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/browse/categories/${category_id}/playlists`,
+         method: "GET", endpoint: `/browse/categories/${parseIDs(category_id)}/playlists`,
          body: { country: country, limit: limit, offset: offset }
       })
    }
@@ -1611,13 +1619,13 @@ class SpotifyAPI
     * Get the current image associated with a specific playlist.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-playlist-cover Spotify API Reference}.
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @returns {Object} A set of images.
     */
    getPlaylistCoverImage(playlist_id)
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${playlist_id}/images`
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}/images`
       })
    }
 
@@ -1630,7 +1638,7 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {String} image Base64 encoded JPEG image data, maximum payload size is 256 KB. You can obtain that by doing:
     * @example fs.readFileSync("./path/to/image.jpeg", "base64")
     *
@@ -1639,7 +1647,7 @@ class SpotifyAPI
    addCustomPlaylistCoverImage(playlist_id, image)
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${playlist_id}/images`,
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/images`,
          body: image
       })
    }
@@ -1675,7 +1683,7 @@ class SpotifyAPI
     * Get Spotify catalog information for a single show identified by its unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-show Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the show.
+    * @param {String} id The Spotify URL or ID for the show.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A show.
@@ -1683,7 +1691,7 @@ class SpotifyAPI
    getShow(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/shows/${id}`,
+         method: "GET", endpoint: `/shows/${parseIDs(id)}`,
          query: { market: market }
       })
    }
@@ -1692,7 +1700,7 @@ class SpotifyAPI
     * Get Spotify catalog information for several shows based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-shows Spotify API Reference}.
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the shows. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A set of shows.
@@ -1701,7 +1709,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/shows`,
-         query: { ids: ids?.join?.(",") ?? ids, market: market }
+         query: { ids: parseIDs(ids), market: market }
       })
    }
 
@@ -1709,7 +1717,7 @@ class SpotifyAPI
     * Get Spotify catalog information about an show's episodes. Optional parameters can be used to limit the number of episodes returned.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-shows-episodes Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the show.
+    * @param {String} id The Spotify URL or ID for the show.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
@@ -1719,7 +1727,7 @@ class SpotifyAPI
    getShowEpisodes(id, { market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/shows/${id}/episodes`,
+         method: "GET", endpoint: `/shows/${parseIDs(id)}/episodes`,
          query: { market: market, limit: limit, offset: offset }
       })
    }
@@ -1751,14 +1759,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the shows. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
     * @returns Show saved.
     */
    saveShowsforCurrentUser(ids)
    {
       return this.request({
          method: "PUT", endpoint: `/me/shows`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1769,7 +1777,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the shows. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns Show removed.
@@ -1778,7 +1786,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/shows`,
-         query: { ids: ids?.join?.(",") ?? ids, market: market }
+         query: { ids: parseIDs(ids), market: market }
       })
    }
 
@@ -1789,14 +1797,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the shows. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
     * @returns {Array<Boolean>} Array of booleans.
     */
    checkUserSavedShows(ids)
    {
       return this.request({
          method: "GET", endpoint: `/me/shows/contains`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1807,7 +1815,7 @@ class SpotifyAPI
     * Get Spotify catalog information for a single track identified by its unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-track Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the track.
+    * @param {String} id The Spotify URL or ID for the track.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A track.
@@ -1815,7 +1823,7 @@ class SpotifyAPI
    getTrack(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/tracks/${id}`,
+         method: "GET", endpoint: `/tracks/${parseIDs(id)}`,
          query: { market: market }
       })
    }
@@ -1824,7 +1832,7 @@ class SpotifyAPI
     * Get Spotify catalog information for multiple tracks based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-tracks Spotify API Reference}.
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @param {Object} opts Optional settings
     * @param {String} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Object} A set of tracks.
@@ -1833,7 +1841,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/tracks`,
-         query: { ids: ids?.join?.(",") ?? ids, market: market }
+         query: { ids: parseIDs(ids), market: market }
       })
    }
 
@@ -1865,14 +1873,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns Track saved.
     */
    saveTracksForCurrentUser(ids)
    {
       return this.request({
          method: "PUT", endpoint: `/me/tracks`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1883,14 +1891,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns Track removed.
     */
    removeUserSavedTracks(ids)
    {
       return this.request({
          method: "DELETE", endpoint: `/me/tracks`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1901,14 +1909,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs. Maximum: 50 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
     * @returns {Array<Boolean>} Array of booleans.
     */
    checkUserSavedTracks(ids)
    {
       return this.request({
          method: "GET", endpoint: `/me/tracks/contains`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1916,14 +1924,14 @@ class SpotifyAPI
     * Get audio features for multiple tracks based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-audio-features Spotify API Reference}.
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify IDs for the tracks. Maximum: 100 IDs.
+    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the tracks. Maximum: 100 IDs.
     * @returns {Object} A set of audio features.
     */
    getTracksAudioFeatures(ids)
    {
       return this.request({
          method: "GET", endpoint: `/audio-features`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -1931,13 +1939,13 @@ class SpotifyAPI
     * Get audio feature information for a single track identified by its unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-audio-features Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the track.
+    * @param {String} id The Spotify URL or ID for the track.
     * @returns {Object} Audio features for one track.
     */
    getTrackAudioFeatures(id)
    {
       return this.request({
-         method: "GET", endpoint: `/audio-features/${id}`
+         method: "GET", endpoint: `/audio-features/${parseIDs(id)}`
       })
    }
 
@@ -1945,13 +1953,13 @@ class SpotifyAPI
     * Get a low-level audio analysis for a track in the Spotify catalog. The audio analysis describes the track's structure and musical content, including rhythm, pitch, and timbre.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-audio-analysis Spotify API Reference}.
     *
-    * @param {String} id The Spotify ID for the track.
+    * @param {String} id The Spotify URL or ID for the track.
     * @returns {Object} Audio analysis for one track.
     */
    getTrackAudioAnalysis(id)
    {
       return this.request({
-         method: "GET", endpoint: `/audio-analysis/${id}`
+         method: "GET", endpoint: `/audio-analysis/${parseIDs(id)}`
       })
    }
 
@@ -2038,13 +2046,13 @@ class SpotifyAPI
     * Get public profile information about a Spotify user.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-users-profile Spotify API Reference}.
     *
-    * @param {String} user_id The user's Spotify user ID.
+    * @param {String} user_id The user's Spotify user URL or ID.
     * @returns {Object} A user.
     */
    getUserProfile(user_id)
    {
       return this.request({
-         method: "GET", endpoint: `/users/${user_id}`
+         method: "GET", endpoint: `/users/${parseIDs(user_id)}`
       })
    }
 
@@ -2056,7 +2064,7 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @param {Object} opts Optional settings
     * @param {Boolean} opts.public_playlist Whether to include the playlist in user's public playlists.
     * @returns Playlist followed.
@@ -2064,7 +2072,7 @@ class SpotifyAPI
    followPlaylist(playlist_id, { public_playlist } = {})
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${playlist_id}/followers`,
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/followers`,
          body: { public_playlist: public_playlist }
       })
    }
@@ -2077,13 +2085,13 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
     * @returns Playlist unfollowed.
     */
    unfollowPlaylist(playlist_id)
    {
       return this.request({
-         method: "DELETE", endpoint: `/playlists/${playlist_id}/followers`
+         method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)}/followers`
       })
    }
 
@@ -2115,7 +2123,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-follow-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the artist or user Spotify IDs.
+    * @param {Array<String>} ids A single string or an array of the artist or user Spotify URLs or IDs.
     * @param {String} type The ID type.
     * @returns Artist or user followed.
     */
@@ -2123,7 +2131,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/following`,
-         query: { type: type, ids: ids?.join?.(",") ?? ids }
+         query: { type: type, ids: parseIDs(ids) }
       })
    }
 
@@ -2134,7 +2142,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-follow-modify"
     *
-    * @param {Array<String>} ids A single string or an array of the artist or user Spotify IDs.
+    * @param {Array<String>} ids A single string or an array of the artist or user Spotify URLs or IDs.
     * @param {String} type The ID type: either "artist" or "user".
     * @returns Artist or user unfollowed.
     */
@@ -2142,7 +2150,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/following`,
-         query: { type: type, ids: ids?.join?.(",") ?? ids }
+         query: { type: type, ids: parseIDs(ids) }
       })
    }
 
@@ -2153,7 +2161,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-follow-read"
     *
-    * @param {Array<String>} ids A single string or an array of the artist or the user Spotify IDs to check.
+    * @param {Array<String>} ids A single string or an array of the artist or the user Spotify URLs or IDs to check.
     * @param {String} type The ID type: either "artist" or "user".
     * @returns {Array<Boolean>} Array of booleans.
     */
@@ -2161,7 +2169,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/following/contains`,
-         query: { type: type, ids: ids?.join?.(",") ?? ids }
+         query: { type: type, ids: parseIDs(ids) }
       })
    }
 
@@ -2169,15 +2177,15 @@ class SpotifyAPI
     * Check to see if one or more Spotify users are following a specified playlist.
     * {@link https://developer.spotify.com/documentation/web-api/reference/check-if-user-follows-playlist Spotify API Reference}.
     *
-    * @param {String} playlist_id The Spotify ID of the playlist.
-    * @param {String} ids An array of the Spotify User IDs that you want to check to see if they follow the playlist. Maximum: 5 ids.
+    * @param {String} playlist_id The Spotify URL or ID of the playlist.
+    * @param {String} ids An array of the Spotify User URLs or IDs that you want to check to see if they follow the playlist. Maximum: 5 ids.
     * @returns {Array<Boolean>} Array of booleans.
     */
    checkIfUsersFollowPlaylist(playlist_id, ids)
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${playlist_id}/followers/contains`,
-         query: { ids: ids?.join?.(",") ?? ids }
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}/followers/contains`,
+         query: { ids: parseIDs(ids) }
       })
    }
 
@@ -2250,5 +2258,21 @@ function objectFromQuery(query)
    return Object.fromEntries(new URLSearchParams(query).entries());
 }
 
+function parseIDs(ids)
+{
+   return [ids].flat().map(id =>
+   {
+      try { return SpotifyAPI.parseURL(id).id }
+      catch { return id }
+   }).join(",")
+}
+function parseURIs(uris)
+{
+   return [uris].flat().map(uri =>
+   {
+      try { return SpotifyAPI.parseURL(uri).uri }
+      catch { return uri }
+   }).join(",")
+}
 
 module.exports = SpotifyAPI

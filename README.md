@@ -36,13 +36,8 @@ Adds a "token" property to the "spoteasy" object. The "token" property contains 
 Now let's try to fetch an album from the Spotify API.
 
 ```js
-
-//the url gets parsed into the endpoint "/albums/6PFPjumGRpZnBzqnDci6qJ"
-
-let albumURL = "https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ?si=4f75fc27072949c2"
-let albumID = SpotifyAPI.parseURL(albumURL).id
-
-let response = await spoteasy.getAlbum(albumID)
+let response = await spoteasy.getAlbum("https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ")
+// The URL gets parsed into the ID "6PFPjumGRpZnBzqnDci6qJ"
 
 console.log(response.tracks.items.map(items => items.name))
 /*
@@ -188,6 +183,9 @@ app.get("/login", async (req, res) => {
 <br>- Added a shorthand for every SpotifyAPI endpoint as of this version upload date.
 <br>- Added a "defaultMarket" option on constructor.
 <br>- Fixed a bug where an empty response would throw an Exception.
+
+- **v1.6.0**:
+<br>- Added URL "id", "ids" and "uris" parsing for every SpotifyAPI endpoint shorthand.
 
 &nbsp;
 ## Found a bug and/or need help?
