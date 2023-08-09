@@ -1,3 +1,5 @@
+"use strict"
+
 /**
  * An Object containing useful methods to create a Spotify Token and make calls to Spotify API.
  *
@@ -1412,7 +1414,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}`,
-         query: { name: name, public_playlist: public_playlist, collaborative: collaborative, description: description }
+         query: { name: name, public: public_playlist, collaborative: collaborative, description: description }
       })
    }
 
@@ -1572,7 +1574,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "POST", endpoint: `/users/${parseIDs(user_id)}/playlists`,
-         body: { name: name, public_playlist: public_playlist, collaborative: collaborative, description: description }
+         body: { name: name, public: public_playlist, collaborative: collaborative, description: description }
       })
    }
 
@@ -2073,7 +2075,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/followers`,
-         body: { public_playlist: public_playlist }
+         body: { public: public_playlist }
       })
    }
 

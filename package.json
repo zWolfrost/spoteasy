@@ -1,6 +1,6 @@
 {
   "name": "spoteasy",
-  "version": "1.6.0",
+  "version": "1.6.2",
   "description": "An easy-to-use zero-dependencies node.js wrapper for the Spotify API",
   "main": "src/spoteasy",
   "repository": {

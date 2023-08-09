@@ -105,7 +105,7 @@ app.get("/login", async (req, res) => {
 
     let response = await spoteasy.createPlaylist(currentUser.id, {
       name: "Hello World",
-      public: false,
+      public_playlist: false,
       description: "Your coolest playlist"
     })
 
