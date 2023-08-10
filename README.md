@@ -134,11 +134,12 @@ app.get("/login", async (req, res) => {
 | setToken                  | Sets the token with the provided properties.
 | refreshToken              | Tries to refresh the authorization token.
 | request                   | Make an API request to the spotify API with the given options.
-| searchTrack               | Shorthand for fetching a "search for item" request with limit 1 and type track, then returning the first item.
 | (static) tracksParser     | The "request" method default parser. Adds a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
 | (static) parseURL         | Extractes important information out of a Spotify URL (like type and id).
 | (static) isValidURL       | Returns true if a given string is a valid Spotify URL.
 | ...other...               | getArtistTopTracks, followPlaylist, getPlaybackState... There is a method for every SpotifyAPI endpoint, fully documented in JSDOC.
+| searchTrack               | Shorthand for fetching a "search for item" request with limit 1 and type track, then returning the first item.
+| getMagic                  | Returns an API response based on the argument (either a search query or a Spotify URL).
 
 
 &nbsp;
@@ -157,6 +158,7 @@ app.get("/login", async (req, res) => {
 | expires_now_in    | (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
 | is_expired        | (Getter) Whether the token is expired
 | auto_refresh      | (Getter/Setter) Whether the token is going to automatically refresh when expired
+| promise           | When creating or refreshing token, this will be the fetch request Promise
 
 
 &nbsp;
@@ -174,6 +176,10 @@ app.get("/login", async (req, res) => {
 - **v1.3.0**:
 <br>- Added "precautionSeconds" option on constructor.
 <br>- Added "refresh_timeout", "expires_now_in" and "auto_refresh" token properties.
+  - v1.3.1:
+  <br>- Fixed bug where the "searchTrack" method wouldn't parse its track.
+
+  <br>
 
 - **v1.4.0**
 <br>- Added "isValidURL" method.
@@ -186,6 +192,18 @@ app.get("/login", async (req, res) => {
 
 - **v1.6.0**:
 <br>- Added URL "id", "ids" and "uris" parsing for every SpotifyAPI endpoint shorthand.
+  - v1.6.1:
+  <br>- Fixed bug where the "public_playlist" property won't work.
+  - v1.6.2:
+  <br>- Updated spoteasy declaration file.
+
+  <br>
+
+- **v1.7.0**:
+<br>- Added "getMagic" method.
+<br>- Added "responseParser" option on constructor.
+<br>- Added "promise" token property.
+<br>- Fixed declaration file link in package.json.
 
 &nbsp;
 ## Found a bug and/or need help?

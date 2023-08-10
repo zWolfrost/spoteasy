@@ -52,18 +52,21 @@ declare class SpotifyAPI {
      * @param {Object} opts Optional settings
      * @param {Boolean} opts.autoRefreshToken Sets the token to auto-refresh when expired on its creation
      * @param {Number} opts.precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
+     * @param {Function} opts.responseParser Response parser to apply to any API response
      * @param {String} opts.defaultMarket Default country market to apply to requests options
      * @returns {SpotifyAPI} A SpotifyAPI object
      */
-    constructor({ autoRefreshToken, precautionSeconds, defaultMarket }?: {
+    constructor({ autoRefreshToken, precautionSeconds, responseParser, defaultMarket }?: {
         autoRefreshToken: boolean;
         precautionSeconds: number;
+        responseParser: Function;
         defaultMarket: string;
     });
+    token: {};
     autoRefreshToken: boolean;
     precautionSeconds: number;
+    responseParser: Function;
     defaultMarket: string;
-    token: {};
     /**
      * Uses the {@link https://developer.spotify.com/documentation/web-api/tutorials/code-flow Authorization code flow} to get an URL to the Spotify Login page
      *
@@ -172,7 +175,7 @@ declare class SpotifyAPI {
      * @param {String=} opts.method The request method
      * @param {Object=} opts.headers The request headers
      * @param {any=} opts.body The request body
-     * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is {@link tracksParser}
+     * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is this.responseParser
      * @returns {Promise} The Promise of the response. If the response is empty, returns the response HTML status code.
      * @throws Error if response has an "error" property.
      */
@@ -1405,5 +1408,23 @@ declare class SpotifyAPI {
      * @returns {Object} Search response.
      */
     searchTrack(q: string): any;
+    /**
+     * If passed a search Query, returns "{@link searchTrack}(q)" with that query as argument.
+     *
+     * If passed a Spotify URL, parses it and returns a response based on its Spotify Item type:
+     * - If "album", returns {@link getAlbum}(id)
+     * - If "artist", returns {@link getArtistTopTracks}(id)
+     * - If "audiobook", returns {@link getAudiobook}(id)
+     * - If "chapter", returns {@link getChapter}(id)
+     * - If "episode", returns {@link getEpisode}(id)
+     * - If "playlist", returns {@link getPlaylist}(id)
+     * - If "show", returns {@link getShow}(id)
+     * - If "track", returns {@link getTrack}(id)
+     * - If "user", returns {@link getUserSavedTracks}(id)
+     *
+     * @param {String} q Either a search query or a Spotify URL
+     * @returns {Object} Magic response (see above).
+     */
+    getMagic(q: string): any;
 }
 //# sourceMappingURL=spoteasy.d.ts.map

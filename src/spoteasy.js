@@ -26,15 +26,19 @@ class SpotifyAPI
     * @param {Object} opts Optional settings
     * @param {Boolean} opts.autoRefreshToken Sets the token to auto-refresh when expired on its creation
     * @param {Number} opts.precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
+    * @param {Function} opts.responseParser Response parser to apply to any API response
     * @param {String} opts.defaultMarket Default country market to apply to requests options
     * @returns {SpotifyAPI} A SpotifyAPI object
     */
-   constructor({autoRefreshToken=true, precautionSeconds=5, defaultMarket="US"}={})
+   constructor({autoRefreshToken=true, precautionSeconds=5, responseParser=SpotifyAPI.tracksParser, defaultMarket="US"}={})
    {
+      this.token = {}
+
       this.autoRefreshToken = autoRefreshToken
       this.precautionSeconds = precautionSeconds
+      this.responseParser = responseParser
+
       this.defaultMarket = defaultMarket
-      this.token = {}
    }
 
 
@@ -212,7 +216,9 @@ class SpotifyAPI
     */
    async requestToken(request)
    {
-      let res = await fetch("https://accounts.spotify.com/api/token", request).then(res => res.json())
+      this.token.promise = fetch("https://accounts.spotify.com/api/token", request).then(res => res.json())
+
+      let res = await this.token.promise
 
       if ("error" in res) throw new Error(res.error_description ?? res.error.message)
 
@@ -334,11 +340,11 @@ class SpotifyAPI
     * @param {String=} opts.method The request method
     * @param {Object=} opts.headers The request headers
     * @param {any=} opts.body The request body
-    * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is {@link tracksParser}
+    * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is this.responseParser
     * @returns {Promise} The Promise of the response. If the response is empty, returns the response HTML status code.
     * @throws Error if response has an "error" property.
     */
-   async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined, parser=SpotifyAPI.tracksParser} )
+   async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined, parser=this.responseParser} )
    {
       if (url)
       {
@@ -2204,6 +2210,46 @@ class SpotifyAPI
       let searchResult = await this.searchForItem(q, "track", { limit: 1 })
 
       return searchResult.parsed_tracks?.[0] ?? null
+   }
+
+   /**
+    * If passed a search Query, returns "{@link searchTrack}(q)" with that query as argument.
+    *
+    * If passed a Spotify URL, parses it and returns a response based on its Spotify Item type:
+    * - If "album", returns {@link getAlbum}(id)
+    * - If "artist", returns {@link getArtistTopTracks}(id)
+    * - If "audiobook", returns {@link getAudiobook}(id)
+    * - If "chapter", returns {@link getChapter}(id)
+    * - If "episode", returns {@link getEpisode}(id)
+    * - If "playlist", returns {@link getPlaylist}(id)
+    * - If "show", returns {@link getShow}(id)
+    * - If "track", returns {@link getTrack}(id)
+    * - If "user", returns {@link getUserSavedTracks}(id)
+    *
+    * @param {String} q Either a search query or a Spotify URL
+    * @returns {Object} Magic response (see above).
+    */
+   getMagic(q)
+   {
+      if (SpotifyAPI.isValidURL(q))
+      {
+         let {type, id} = SpotifyAPI.parseURL(q)
+
+         switch(type)
+         {
+            case "album": return this.getAlbum(id)
+            case "artist": return this.getArtistTopTracks(id)
+            case "audiobook": return this.getAudiobook(id)
+            case "chapter": return this.getChapter(id)
+            case "episode": return this.getEpisode(id)
+            case "playlist": return this.getPlaylist(id)
+            case "show": return this.getShow(id)
+            case "track": return this.getTrack(id)
+            case "user": return this.getUserSavedTracks(id)
+         }
+      }
+
+      return this.searchTrack(q)
    }
 }
 
