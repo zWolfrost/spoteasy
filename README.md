@@ -12,6 +12,8 @@ Some of the most notable capabilities:
 &nbsp;
 ## How to use
 
+Note free accounts can only be used for browsing and current playback status. Only premium accounts can be controlled (pause, play, next, etc.).
+
 ### Importing & Initialization
 ```js
 const SpotifyAPI = require("spoteasy");
@@ -204,6 +206,11 @@ app.get("/login", async (req, res) => {
 <br>- Added "responseParser" option on constructor.
 <br>- Added "promise" token property.
 <br>- Fixed declaration file link in package.json.
+  - v1.7.1:
+  <br>- Fixed wrong JSDOC parameter types.
+  <br>- Fixed "startOrResumePlayback" method that won't parse URIs.
+
+  <br>
 
 &nbsp;
 ## Found a bug and/or need help?
