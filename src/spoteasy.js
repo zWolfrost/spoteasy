@@ -5,17 +5,19 @@
  *
  * After a token has been created, this object will contain in addition to the settings provided in the constructor, a token object:
  *
- * @param {Object}  token - A SpotifyAPI token object
- * @param {String}  token.access_token    - The actual access token
- * @param {String}  token.token_type      - The token type (e.g. "Bearer")
- * @param {Number}  token.expires_in      - The amount of seconds that the token can be used for before it expires, starting from its creation
- * @param {Number}  token.expires_in_ms   - The amount of milliseconds that the token can be used for before it expires, starting from its creation
- * @param {Number}  token.expire_time     - The Date.now() milliseconds on which the token will expire
- * @param {String}  token.scope           - A series of strings separated by a comma "," of the allowed authorization scopes
- * @param {Object}  token.refresh_timeout - The Timeout object of the auto refresh
- * @param {Number}  token.expires_now_in  - (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
- * @param {Boolean} token.is_expired      - (Getter) Whether the token is expired
- * @param {Boolean} token.auto_refresh    - (Getter/Setter) Whether the token is going to automatically refresh when expired
+ * @param {Object}                 token - A SpotifyAPI token object
+ * @param {String}    token.access_token - The actual access token
+ * @param {String}      token.token_type - The token type (e.g. "Bearer")
+ * @param {Number}      token.expires_in - The amount of seconds that the token can be used for before it expires, starting from its creation
+ * @param {Number}   token.expires_in_ms - The amount of milliseconds that the token can be used for before it expires, starting from its creation
+ * @param {Number}     token.expire_time - The Date.now() milliseconds on which the token will expire
+ * @param {Array<String>}    token.scope - An array of the allowed authorization scopes
+ * @param {Object} token.refresh_timeout - The Timeout object of the auto refresh
+ * @param {Number}  token.expires_now_in - (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
+ * @param {Boolean}     token.is_expired - (Getter) Whether the token is expired
+ * @param {Boolean}   token.auto_refresh - (Getter/Setter) Whether the token is going to automatically refresh when expired
+ * @param {Promise}        token.promise - When creating or refreshing token, this will be the fetch request Promise
+ *
  * @param {String}  token.error             - If the token creation was unsuccessful, displays the type of error encountered
  * @param {String}  token.error_description - If the token creation was unsuccessful, displays the description of the error encountered
  */
@@ -276,6 +278,8 @@ class SpotifyAPI
       this.token = {
          ...properties,
 
+         scope: properties.scope?.split(" ") ?? [],
+
          expires_in_ms: properties.expires_in*1000,
          expire_time: Date.now() + properties.expires_in*1000,
          get expires_now_in() { return this.expire_time - Date.now() },
@@ -380,11 +384,10 @@ class SpotifyAPI
     * @param {String} opts.method The request method
     * @param {Object=} opts.headers The request headers
     * @param {any=} opts.body The request body
-    * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is this.responseParser
     * @returns {Promise} The Promise of the response. If the response is empty, returns the response HTML status code.
     * @throws Error if response has an "error" property.
     */
-   async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined, parser=this.responseParser} )
+   async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined} )
    {
       if (this.token.access_token === undefined)
       {
@@ -418,7 +421,7 @@ class SpotifyAPI
 
       if ("error" in res) throw new Error(res.error_description ?? res.error.message)
 
-      if (parser) return parser(res)
+      if (this.responseParser) return this.responseParser(res)
 
       return res
    }
@@ -1698,12 +1701,13 @@ class SpotifyAPI
     * - "playlist-modify-private"
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {String} image Base64 encoded JPEG image data, maximum payload size is 256 KB. You can obtain that by doing:
+    * @param {Object} opts Optional settings
+    * @param {String=} opts.image Base64 encoded JPEG image data, maximum payload size is 256 KB. You can obtain that by doing:
     * @example fs.readFileSync("./path/to/image.jpeg", "base64")
     *
     * @returns {Promise} Image uploaded.
     */
-   addCustomPlaylistCoverImage(playlist_id, image)
+   addCustomPlaylistCoverImage(playlist_id, { image } = {})
    {
       return this.request({
          method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/images`,
@@ -2315,9 +2319,7 @@ class SpotifyAPI
     */
    async searchTrack(q)
    {
-      let searchResult = await this.searchForItem(q, "track", { limit: 1 })
-
-      return searchResult.parsed_tracks?.[0] ?? null
+      return this.searchForItem(q, "track", { limit: 1 })
    }
 
    /**

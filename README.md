@@ -172,7 +172,7 @@ app.get("/login", async (req, res) => {
 | expires_in        | The amount of seconds that the token can be used for before it expires, starting from its creation
 | expires_in_ms     | The amount of milliseconds that the token can be used for before it expires, starting from its creation
 | expire_time       | The Date.now() milliseconds on which the token will expire
-| scope             | A series of strings separated by a comma "," of the allowed authorization scopes
+| scope             | An array of the allowed authorization scopes
 | refresh_timeout   | The Timeout object of the auto refresh
 | expires_now_in    | (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
 | is_expired        | (Getter) Whether the token is expired
@@ -232,6 +232,13 @@ app.get("/login", async (req, res) => {
 - **v1.8.0**:
 <br>- Added "awaitToken" option on constructor.
 <br>- Fixed broken JSDOC optional parameters types, caused by patch v1.7.1
+
+- **v2.0.0**:
+<br>- Removed "parser" option from "request" method. You can choose the response parser by setting the "responseParser" property either in the constructor or whenever you need it in the SpotifyAPI class object.
+<br>- Made "scope" property in the token obect an Array of scopes, instead of a string of scopes separated by a space " ".
+<br>- Made "image" parameter an optional one in the method "addCustomPlaylistCover".
+<br>- Made "searchTrack" method return the actual response, not only the parsed track (This will also affect the "getMagic" method).
+<br>- Fixed bug where a track object with no external url would crash "trackParser".
 
 
 &nbsp;

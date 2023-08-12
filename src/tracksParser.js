@@ -71,7 +71,7 @@ function parseTrackObject(track)
       authors: getAuthors(track.artists) ?? [track.album?.publisher],
 
       cover: track.images ?? track.album?.images,
-      url: track.external_urls.spotify,
+      url: track.external_urls?.spotify,
    }
 
    info.query = `${track.name} ${info.authors.join(" ")} ${track.album?.name}`;
