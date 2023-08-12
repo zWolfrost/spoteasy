@@ -4,7 +4,7 @@ An easy-to-use zero-dependencies node.js wrapper for the Spotify API.
 All versions are written in node.js v18.17.0 and have no dependencies.
 
 Some of the most notable capabilities:
-- Fetching a Spotify Token in each one of the [four ways]((https://developer.spotify.com/documentation/web-api/concepts/authorization)) specified in the Spotify API documentation;
+- Fetching a Spotify Token in **each one** of the [four ways](https://developer.spotify.com/documentation/web-api/concepts/authorization) specified in the Spotify API documentation;
 - Simple & documented methods to request **anything** from the api;
 - Access token **auto-refreshing**
 
@@ -30,18 +30,22 @@ I've made two examples that use the [Client Credentials Flow](https://developer.
 ### [Client Credentials Flow](https://developer.spotify.com/documentation/web-api/tutorials/client-credentials-flow)
 ```js
 let spoteasy = new SpotifyAPI()
-await spoteasy.clientCredentialsFlow("<Client ID>", "<Client Secret>")
+spoteasy.clientCredentialsFlow("<Client ID>", "<Client Secret>")
 ```
 
-Adds a "token" property to the "spoteasy" object. The "token" property contains an object with various useful properties, beyond the actual access token.
+Adds a "token" property to the "spoteasy" object. The "token" property contains an object with [various useful properties](#spotifyapi-token-properties), beyond the actual access token.
 
 Now let's try to fetch an album from the Spotify API.
 
 ```js
-let response = await spoteasy.getAlbum("https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ")
-// The URL gets parsed into the ID "6PFPjumGRpZnBzqnDci6qJ"
+// Same as spoteasy.getAlbum("6PFPjumGRpZnBzqnDci6qJ")
+// Also, if you are in an async function, you can, of course, "await" the Promise.
+spoteasy.getAlbum("https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ")
+  .then(res => {
+    let tracklist = res.tracks.items
+    console.log(tracklist.map(track => track.name))
+  })
 
-console.log(response.tracks.items.map(items => items.name))
 /*
   [
     'Papercut',
@@ -120,6 +124,19 @@ app.get("/login", async (req, res) => {
   }
 })
 ```
+
+
+&nbsp;
+## SpotifyAPI Constructor Options
+
+| Option            | Description
+|:-:                |:-
+| autoRefreshToken  | Whether to set the token to auto-refresh when expired on its creation.
+| precautionSeconds | Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
+| awaitToken        | If true, and a token creation is in progress, makes any request wait for the token to be created before continuing.
+| responseParser    | The response parser to apply to any API response.
+| defaultMarket     | The default country market to apply to requests options.
+
 
 &nbsp;
 ## SpotifyAPI Object Main Methods
@@ -211,6 +228,11 @@ app.get("/login", async (req, res) => {
   <br>- Fixed "startOrResumePlayback" method that won't parse URIs.
 
   <br>
+
+- **v1.8.0**:
+<br>- Added "awaitToken" option on constructor.
+<br>- Fixed broken JSDOC optional parameters types, caused by patch v1.7.1
+
 
 &nbsp;
 ## Found a bug and/or need help?

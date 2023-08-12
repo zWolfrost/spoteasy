@@ -22,20 +22,28 @@
 class SpotifyAPI
 {
    /**
-    * Creates a SpotifyAPI object with the provided default settings
-    * @param {Object=} opts Optional settings
-    * @param {Boolean=} opts.autoRefreshToken Sets the token to auto-refresh when expired on its creation
-    * @param {Number=} opts.precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
-    * @param {Function=} opts.responseParser Response parser to apply to any API response
-    * @param {String=} opts.defaultMarket Default country market to apply to requests options
-    * @returns {SpotifyAPI} A SpotifyAPI object
+    * Creates a SpotifyAPI object with the provided settings. You can also edit these settings after its creation.
+    * @param {Object} opts Optional settings
+    * @param {Boolean} opts.autoRefreshToken Whether to set the token to auto-refresh when expired on its creation.
+    * @param {Number} opts.precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
+    * @param {Boolean} opts.awaitToken If true, and a token creation is in progress, makes any request wait for the token to be created before continuing.
+    * @param {Function} opts.responseParser The response parser to apply to any API response.
+    * @param {String} opts.defaultMarket The default country market to apply to requests options.
+    * @returns {SpotifyAPI} A SpotifyAPI object.
     */
-   constructor({autoRefreshToken=true, precautionSeconds=5, responseParser=SpotifyAPI.tracksParser, defaultMarket="US"}={})
+   constructor({
+      autoRefreshToken=true,
+      precautionSeconds=5,
+      awaitToken=true,
+      responseParser=SpotifyAPI.tracksParser,
+      defaultMarket="US"
+   }={})
    {
       this.token = {}
 
       this.autoRefreshToken = autoRefreshToken
       this.precautionSeconds = precautionSeconds
+      this.awaitToken = awaitToken
       this.responseParser = responseParser
 
       this.defaultMarket = defaultMarket
@@ -53,7 +61,7 @@ class SpotifyAPI
     * @param {String} clientID The Spotify app Client ID
     * @param {String} clientSecret The Spotify app Client Secret
     * @param {String} redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Array<String>=} opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
     * @param {Boolean=} opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
     * @returns {String} Returns the URL that the user has to open to authenticate.
@@ -73,26 +81,36 @@ class SpotifyAPI
                }
             )
 
-            return this.requestToken(request)
-               .then(token => this.setToken({...token, refresh: refreshFun}))
+            return this.token.promise = new Promise(async resolve =>
+            {
+               let resToken = await this.requestToken(request)
+               resToken.refresh = refreshFun
+               resolve(this.setToken(resToken))
+            })
          }
       }
 
-      this.token.resolve = (authCode) =>
+      this.token.promise = new Promise(resolve =>
       {
-         let request = createPostRequest(
-            {
-               grant_type: "authorization_code",
-               code: authCode.code ?? authCode,
-               redirect_uri: redirectURI,
-               client_id: clientID,
-               client_secret: clientSecret,
-            }
-         )
+         this.token.resolve = async authCode =>
+         {
+            let request = createPostRequest(
+               {
+                  grant_type: "authorization_code",
+                  code: authCode.code ?? authCode,
+                  redirect_uri: redirectURI,
+                  client_id: clientID,
+                  client_secret: clientSecret,
+               }
+            )
 
-         return this.requestToken(request)
-         .then(token => this.setToken({...token, refresh: refreshFun}))
-      }
+            let resToken = await this.requestToken(request)
+            resToken.refresh = refreshFun
+            resolve(this.setToken(resToken))
+
+            return this.token
+         }
+      })
 
       return this.token.url = getAuthURL("code", clientID, redirectURI, {scope: scope, show_dialog: show_dialog})
    }
@@ -104,7 +122,7 @@ class SpotifyAPI
     *
     * @param {String} clientID The Spotify app Client ID
     * @param {String} redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Array<String>=} opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
     * @param {Boolean=} opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
     * @returns {String} Returns the URL that the user has to open to authenticate.
@@ -123,8 +141,12 @@ class SpotifyAPI
                }
             )
 
-            return this.requestToken(request)
-               .then(token => this.setToken({...token, refresh: refreshFun}))
+            return this.token.promise = new Promise(async resolve =>
+            {
+               let resToken = await this.requestToken(request)
+               resToken.refresh = refreshFun
+               resolve(this.setToken(resToken))
+            })
          }
       }
 
@@ -140,21 +162,27 @@ class SpotifyAPI
       let codeVerifier = generateRandomString(128);
       let codeChallenge = generateCodeChallenge(codeVerifier)
 
-      this.token.resolve = (authCode) =>
+      this.token.promise = new Promise(resolve =>
       {
-         let request = createPostRequest(
-            {
-               grant_type: "authorization_code",
-               code: authCode.code ?? authCode,
-               redirect_uri: redirectURI,
-               client_id: clientID,
-               code_verifier: codeVerifier,
-            }
-         )
+         this.token.resolve = async authCode =>
+         {
+            let request = createPostRequest(
+               {
+                  grant_type: "authorization_code",
+                  code: authCode.code ?? authCode,
+                  redirect_uri: redirectURI,
+                  client_id: clientID,
+                  code_verifier: codeVerifier,
+               }
+            )
 
-         return this.requestToken(request)
-            .then(token => this.setToken({...token, refresh: refreshFun}))
-      }
+            let resToken = await this.requestToken(request)
+            resToken.refresh = refreshFun
+            resolve(this.setToken(resToken))
+
+            return this.token
+         }
+      })
 
       return this.token.url = getAuthURL("code", clientID, redirectURI, {scope: scope, show_dialog: show_dialog, code_challenge: codeChallenge})
    }
@@ -183,8 +211,12 @@ class SpotifyAPI
          }
       )
 
-      return this.requestToken(request)
-         .then(token => this.setToken({...token, refresh: refreshFun}))
+      return this.token.promise = new Promise(async resolve =>
+      {
+         let resToken = await this.requestToken(request)
+         resToken.refresh = refreshFun
+         resolve(this.setToken(resToken))
+      })
    }
 
    /**
@@ -194,14 +226,22 @@ class SpotifyAPI
     *
     * @param {String} clientID The Spotify app Client ID
     * @param {String} redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Array<String>=} opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
     * @param {Boolean=} opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
     * @returns {String} Returns the URL that the user has to open to authenticate.
     */
    implicitGrantFlow(clientID, redirectURI, {scope=[], show_dialog=false}={})
    {
-      this.token.resolve = this.setToken
+      this.token.promise = new Promise(resolve =>
+      {
+         this.token.resolve = async (...args) =>
+         {
+            resolve(this.setToken(...args))
+
+            return this.token
+         }
+      })
 
       return this.token.url = SpotifyAPI.getAuthURL("token", clientID, redirectURI, {scope: scope, show_dialog: show_dialog})
    }
@@ -217,9 +257,7 @@ class SpotifyAPI
     */
    async requestToken(request)
    {
-      this.token.promise = fetch("https://accounts.spotify.com/api/token", request).then(res => res.json())
-
-      let res = await this.token.promise
+      let res = await fetch("https://accounts.spotify.com/api/token", request).then(res => res.json())
 
       if ("error" in res) throw new Error(res.error_description ?? res.error.message)
 
@@ -334,12 +372,12 @@ class SpotifyAPI
     *    description: "Your coolest playlist"
     * })
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.url The URL of the spotify item, which will be converted into its respective endpoint. If a match is found, it gets prepended to the endpoint property.
-    * @param {String=} opts.location The URL location to make a request at
-    * @param {String=} opts.endpoint The URL endpoint to make a request at
-    * @param {Object=} opts.query The query to add to the endpoint
-    * @param {String=} opts.method The request method
+    * @param {String} opts.location The URL location to make a request at
+    * @param {String} opts.endpoint The URL endpoint to make a request at
+    * @param {Object} opts.query The query to add to the endpoint
+    * @param {String} opts.method The request method
     * @param {Object=} opts.headers The request headers
     * @param {any=} opts.body The request body
     * @param {Function=} opts.parser An optional parser function to pass the request result before returning. The default one is this.responseParser
@@ -348,6 +386,12 @@ class SpotifyAPI
     */
    async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined, parser=this.responseParser} )
    {
+      if (this.token.access_token === undefined)
+      {
+         if (this.awaitToken && this.token.promise) await this.token.promise
+         else throw new Error("No access token has been created!")
+      }
+
       if (url)
       {
          endpoint = SpotifyAPI.parseURL(url).endpoint + endpoint
@@ -495,7 +539,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-album Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID of the album.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} An album.
     */
@@ -512,7 +556,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-albums Spotify API Reference}.
     *
     * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A set of albums.
     */
@@ -529,7 +573,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-albums-tracks Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID of the album.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -550,7 +594,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -622,7 +666,7 @@ class SpotifyAPI
     * Get a list of new album releases featured in Spotify (shown, for example, on a Spotify player's "Browse" tab).
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-new-releases Spotify API Reference}.
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -673,7 +717,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-albums Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID of the artist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String | Array<String>=} opts.include_groups A single string or an array of keywords that will be used to filter the response. If not supplied, all album types will be returned.
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
@@ -693,7 +737,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-top-tracks Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID of the artist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A set of tracks.
     */
@@ -727,7 +771,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-audiobook Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID for the audiobook.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} An Audiobook.
     */
@@ -744,7 +788,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-audiobooks Spotify API Reference}.
     *
     * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A set of audiobooks.
     */
@@ -761,7 +805,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-audiobook-chapters Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID for the audiobook.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -782,7 +826,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
     * @returns {Promise} Pages of audiobooks.
@@ -856,7 +900,7 @@ class SpotifyAPI
     * Get a list of categories used to tag items in Spotify (on, for example, the Spotify player's "Browse" tab).
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-categories Spotify API Reference}.
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
     * @param {String=} opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
@@ -876,7 +920,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-category Spotify API Reference}.
     *
     * @param {String} category_id The Spotify category ID for the category.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
     * @param {String=} opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
     * @returns {Promise} A category.
@@ -897,7 +941,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-chapter Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID for the chapter.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A Chapter.
     */
@@ -914,7 +958,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-chapters Spotify API Reference}.
     *
     * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A set of chapters.
     */
@@ -937,7 +981,7 @@ class SpotifyAPI
     * - "user-read-playback-position"
     *
     * @param {String} id The Spotify URL or ID for the episode.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} An episode.
     */
@@ -957,7 +1001,7 @@ class SpotifyAPI
     * - "user-read-playback-position"
     *
     * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the episodes. Maximum: 50 IDs.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A set of episodes.
     */
@@ -977,7 +1021,7 @@ class SpotifyAPI
     * - "user-library-read"
     * - "user-read-playback-position"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -1087,7 +1131,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-state"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {String | Array<String>=} opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
     * @returns {Promise} Information about playback.
@@ -1108,7 +1152,7 @@ class SpotifyAPI
     * - "user-modify-playback-state"
     *
     * @param {String | Array<String>=} device_ids An array containing the ID of the device on which playback should be started/transferred.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Boolean=} opts.play Whether to ensure playback happens on new device. Otherwise keep the current playback state.
     * @returns {Promise} Playback transferred.
     */
@@ -1143,7 +1187,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-currently-playing"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {String | Array<String>=} opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
     * @returns {Promise} Information about the currently playing track.
@@ -1163,7 +1207,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @param {String=} opts.context_uri Spotify URL or URI of the context to play. Valid contexts are albums, artists & playlists.
     * @param {String | Array<String>=} opts.uris A string or an array of the Spotify track URLs or URIs to play.
@@ -1192,7 +1236,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Playback paused.
     */
@@ -1211,7 +1255,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Command sent.
     */
@@ -1230,7 +1274,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Command sent.
     */
@@ -1250,7 +1294,7 @@ class SpotifyAPI
     * - "user-modify-playback-state"
     *
     * @param {Number} position_ms The position in milliseconds to seek to. Must be a positive number. Passing in a position that is greater than the length of the track will cause the player to start playing the next song.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Command sent.
     */
@@ -1270,7 +1314,7 @@ class SpotifyAPI
     * - "user-modify-playback-state"
     *
     * @param {String} state If "track", will repeat the current track. If "context" will repeat the current context. If "off" will turn repeat off.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Command sent.
     */
@@ -1290,7 +1334,7 @@ class SpotifyAPI
     * - "user-modify-playback-state"
     *
     * @param {Number} volume_percent The volume to set. Must be a value from 0 to 100 inclusive.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Command sent.
     */
@@ -1310,7 +1354,7 @@ class SpotifyAPI
     * - "user-modify-playback-state"
     *
     * @param {Boolean} state Whether to shuffle user's playback.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Command sent.
     */
@@ -1329,7 +1373,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-recently-played"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.after A Unix timestamp in milliseconds. Returns all items after (but not including) this cursor position. If after is specified, before must not be specified.
     * @param {Number=} opts.before A Unix timestamp in milliseconds. Returns all items before (but not including) this cursor position. If before is specified, after must not be specified.
@@ -1367,7 +1411,7 @@ class SpotifyAPI
     * - "user-modify-playback-state"
     *
     * @param {String} uri The uri of the item to add to the queue. Must be a track or an episode uri.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
     * @returns {Promise} Command received.
     */
@@ -1393,7 +1437,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-playlist Spotify API Reference}.
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {String | Array<String>=} opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
     * @param {String | Array<String>=} opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
@@ -1416,7 +1460,7 @@ class SpotifyAPI
     * - "playlist-modify-private"
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.name The new name for the playlist.
     * @param {Boolean=} opts.public_playlist Whether the playlist will be public.
     * @param {Boolean=} opts.collaborative Whether the playlist will become collaborative and other users will be able to modify the playlist in their Spotify client.
@@ -1439,7 +1483,7 @@ class SpotifyAPI
     * - "playlist-read-private"
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {String | Array<String>=} opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
@@ -1464,7 +1508,7 @@ class SpotifyAPI
     * - "playlist-modify-private"
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String | Array<String>=} opts.uris A single string or an array of Spotify URLs or URIs to set, can be track or episode URIs.
     * @param {Number=} opts.range_start The position of the first item to be reordered.
     * @param {Number=} opts.insert_before The position where the items should be inserted. To reorder the items to the end of the playlist, simply set insert_before to the position after the last item.
@@ -1490,7 +1534,7 @@ class SpotifyAPI
     * - "playlist-modify-private"
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Number=} opts.position The position to insert the items, a zero-based index. If omitted, the items will be appended to the playlist.
     * @param {String | Array<String>=} opts.uris A single string or an array of Spotify URLs or URIs to add, can be track or episode URIs.
     * @returns {Promise} A snapshot ID for the playlist.
@@ -1512,8 +1556,8 @@ class SpotifyAPI
     * - "playlist-modify-private"
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object=} opts Optional settings
-    * @param {Object=} opts.tracks An object or an array of objects containing Spotify URIs of the tracks or episodes to remove.
+    * @param {Object} opts Optional settings
+    * @param {Object} opts.tracks An object or an array of objects containing Spotify URIs of the tracks or episodes to remove.
     * @param {String=} opts.snapshot_id The playlist's snapshot ID against which you want to make the changes.
     * @returns {Promise} A snapshot ID for the playlist.
     */
@@ -1532,7 +1576,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "playlist-read-private"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first playlist to return. Default: 0 (the first object). Maximum offset: 100.000. Use with limit to get the next set of playlists.
     * @returns {Promise} A paged set of playlists.
@@ -1554,7 +1598,7 @@ class SpotifyAPI
     * - "playlist-read-collaborative"
     *
     * @param {String} user_id The user's Spotify user URL or ID.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first playlist to return. Default: 0 (the first object). Maximum offset: 100.000. Use with limit to get the next set of playlists.
     * @returns {Promise} A paged set of playlists.
@@ -1576,7 +1620,7 @@ class SpotifyAPI
     * - "playlist-modify-private"
     *
     * @param {String} user_id The user's Spotify user URL or ID.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.name The name for the new playlist. This name does not need to be unique; a user may have several playlists with the same name.
     * @param {Boolean=} opts.public_playlist Whether the playlist will be public.
     * @param {Boolean=} opts.collaborative Whether the playlist will be collaborative.
@@ -1595,7 +1639,7 @@ class SpotifyAPI
     * Get a list of Spotify featured playlists (shown, for example, on a Spotify player's 'Browse' tab).
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-featured-playlists Spotify API Reference}.
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
     * @param {String=} opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
     * @param {String=} opts.timestamp A timestamp in ISO 8601 format: yyyy-MM-ddTHH:mm:ss. Use this parameter to specify the user's local time to get results tailored for that specific date and time in the day. If not provided, the response defaults to the current UTC time.
@@ -1616,7 +1660,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-categories-playlists Spotify API Reference}.
     *
     * @param {String} category_id The Spotify category URL or ID for the category.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -1676,7 +1720,7 @@ class SpotifyAPI
     *
     * @param {String} q You can narrow down your search using field filters. The available filters are album, artist, track, year, upc, tag:hipster, tag:new, isrc, and genre. Each field filter only applies to certain result types.
     * @param {String | Array<String>} type A single string or an array of item types to search across. Search results include hits from all the specified item types.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of results to return in each item type.
     * @param {Number=} opts.offset The index of the first item to return. Use with limit to get the next page of search results.
@@ -1699,7 +1743,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-show Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID for the show.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A show.
     */
@@ -1716,7 +1760,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-shows Spotify API Reference}.
     *
     * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A set of shows.
     */
@@ -1733,7 +1777,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-shows-episodes Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID for the show.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -1754,7 +1798,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
     * @returns {Promise} Pages of shows.
@@ -1793,7 +1837,7 @@ class SpotifyAPI
     * - "user-library-modify"
     *
     * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} Show removed.
     */
@@ -1831,7 +1875,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-track Spotify API Reference}.
     *
     * @param {String} id The Spotify URL or ID for the track.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A track.
     */
@@ -1848,7 +1892,7 @@ class SpotifyAPI
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-tracks Spotify API Reference}.
     *
     * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @returns {Promise} A set of tracks.
     */
@@ -1867,7 +1911,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -1985,9 +2029,66 @@ class SpotifyAPI
     * @param {String} seed_artists An array of Spotify IDs for seed artists.
     * @param {String} seed_genres An array of any genres in the set of available genre seeds.
     * @param {String} seed_tracks An array of Spotify IDs for a seed track.
-    * @param {Object=} opts See the {@link https://developer.spotify.com/documentation/web-api/reference/get-recommendations Spotify API Reference} for a full list of all the remaining options
+    *
+    * @param {Object} opts See the {@link https://developer.spotify.com/documentation/web-api/reference/get-recommendations Spotify API Reference} for a full list of all the remaining options
     * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
     * @param {Number=} opts.limit The target size of the list of recommended tracks. Default: 20. Minimum: 1. Maximum: 100.
+    *
+    * @param {Number=} opts.min_acousticness
+    * @param {Number=} opts.max_acousticness
+    * @param {Number=} opts.target_acousticness
+    *
+    * @param {Number=} opts.min_danceability
+    * @param {Number=} opts.max_danceability
+    * @param {Number=} opts.target_danceability
+    *
+    * @param {Number=} opts.min_duration_ms
+    * @param {Number=} opts.max_duration_ms
+    * @param {Number=} opts.target_duration_ms
+    *
+    * @param {Number=} opts.min_energy
+    * @param {Number=} opts.max_energy
+    * @param {Number=} opts.target_energy
+    *
+    * @param {Number=} opts.min_instrumentalness
+    * @param {Number=} opts.max_instrumentalness
+    * @param {Number=} opts.target_instrumentalness
+    *
+    * @param {Number=} opts.min_key
+    * @param {Number=} opts.max_key
+    * @param {Number=} opts.target_key
+    *
+    * @param {Number=} opts.min_liveness
+    * @param {Number=} opts.max_liveness
+    * @param {Number=} opts.target_liveness
+    *
+    * @param {Number=} opts.min_loudness
+    * @param {Number=} opts.max_loudness
+    * @param {Number=} opts.target_loudness
+    *
+    * @param {Number=} opts.min_mode
+    * @param {Number=} opts.max_mode
+    * @param {Number=} opts.target_mode
+    *
+    * @param {Number=} opts.min_popularity
+    * @param {Number=} opts.max_popularity
+    * @param {Number=} opts.target_popularity
+    *
+    * @param {Number=} opts.min_speechiness
+    * @param {Number=} opts.max_speechiness
+    * @param {Number=} opts.target_speechiness
+    *
+    * @param {Number=} opts.min_tempo
+    * @param {Number=} opts.max_tempo
+    * @param {Number=} opts.target_tempo
+    *
+    * @param {Number=} opts.min_time_signature
+    * @param {Number=} opts.max_time_signature
+    * @param {Number=} opts.target_time_signature
+    *
+    * @param {Number=} opts.min_valence
+    * @param {Number=} opts.max_valence
+    * @param {Number=} opts.target_valence
     *
     * @returns {Promise} A set of recommendations.
     */
@@ -2043,7 +2144,7 @@ class SpotifyAPI
     * - "user-top-read"
     *
     * @param {String} type The type of entity to return. Valid values: "artists" or "tracks"
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.time_range Over what time frame the affinities are computed. Valid values: "long_term"," medium_term", "short_term".
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
@@ -2080,7 +2181,7 @@ class SpotifyAPI
     * - "playlist-modify-private"
     *
     * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {Boolean=} opts.public_playlist Whether to include the playlist in user's public playlists.
     * @returns {Promise} Playlist followed.
     */
@@ -2118,7 +2219,7 @@ class SpotifyAPI
     * - "user-follow-read"
     *
     * @param {String} type The ID type: currently only "artist" is supported.
-    * @param {Object=} opts Optional settings
+    * @param {Object} opts Optional settings
     * @param {String=} opts.after The last artist URL or ID retrieved from the previous request.
     * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
     * @returns {Promise} A paged set of artists.
