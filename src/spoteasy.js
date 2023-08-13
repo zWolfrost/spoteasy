@@ -549,7 +549,7 @@ class SpotifyAPI
    getAlbum(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/albums/${parseIDs(id)}`,
+         method: "GET", endpoint: `/albums/${parseIDs(id)[0]}`,
          query: { market: market }
       })
    }
@@ -567,7 +567,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/albums`,
-         query: { ids: parseIDs(ids), market: market }
+         query: { ids: parseIDs(ids).join(","), market: market }
       })
    }
 
@@ -585,7 +585,7 @@ class SpotifyAPI
    getAlbumTracks(id, { market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/albums/${parseIDs(id)}/tracks`,
+         method: "GET", endpoint: `/albums/${parseIDs(id)[0]}/tracks`,
          query: { market: market, limit: limit, offset: offset }
       })
    }
@@ -625,7 +625,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/albums`,
-         query: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -643,7 +643,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/albums`,
-         query: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -661,7 +661,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/albums/contains`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -696,7 +696,7 @@ class SpotifyAPI
    getArtist(id)
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${parseIDs(id)}`
+         method: "GET", endpoint: `/artists/${parseIDs(id)[0]}`
       })
    }
 
@@ -711,7 +711,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/artists`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -730,7 +730,7 @@ class SpotifyAPI
    getArtistAlbums(id, { include_groups, market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${parseIDs(id)}/albums`,
+         method: "GET", endpoint: `/artists/${parseIDs(id)[0]}/albums`,
          query: {include_groups: include_groups?.join?.(",") ?? include_groups, market: market, limit: limit, offset: offset }
       })
    }
@@ -747,7 +747,7 @@ class SpotifyAPI
    getArtistTopTracks(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${parseIDs(id)}/top-tracks`,
+         method: "GET", endpoint: `/artists/${parseIDs(id)[0]}/top-tracks`,
          query: { market: market }
       })
    }
@@ -762,7 +762,7 @@ class SpotifyAPI
    getArtistRelatedArtists(id)
    {
       return this.request({
-         method: "GET", endpoint: `/artists/${parseIDs(id)}/related-artists`
+         method: "GET", endpoint: `/artists/${parseIDs(id)[0]}/related-artists`
       })
    }
 
@@ -781,7 +781,7 @@ class SpotifyAPI
    getAudiobook(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/audiobooks/${parseIDs(id)}`,
+         method: "GET", endpoint: `/audiobooks/${parseIDs(id)[0]}`,
          query: { market: market }
       })
    }
@@ -799,7 +799,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/audiobooks`,
-         query: { ids: parseIDs(ids), market: market }
+         query: { ids: parseIDs(ids).join(","), market: market }
       })
    }
 
@@ -817,7 +817,7 @@ class SpotifyAPI
    getAudiobookChapters(id, { market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/audiobooks/${parseIDs(id)}/chapters`,
+         method: "GET", endpoint: `/audiobooks/${parseIDs(id)[0]}/chapters`,
          query: { market: market, limit: limit, offset: offset }
       })
    }
@@ -856,7 +856,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/audiobooks`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -874,7 +874,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/audiobooks`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -892,7 +892,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/audiobooks/contains`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -951,7 +951,7 @@ class SpotifyAPI
    getChapter(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/chapters/${parseIDs(id)}`,
+         method: "GET", endpoint: `/chapters/${parseIDs(id)[0]}`,
          query: { market: market }
       })
    }
@@ -969,7 +969,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/chapters`,
-         query: { ids: parseIDs(ids) ?? ids, market: market }
+         query: { ids: parseIDs(ids).join(","), market: market }
       })
    }
 
@@ -991,7 +991,7 @@ class SpotifyAPI
    getEpisode(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/episodes/${parseIDs(id)}`,
+         method: "GET", endpoint: `/episodes/${parseIDs(id)[0]}`,
          query: { market: market }
       })
    }
@@ -1012,7 +1012,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/episodes`,
-         query: { ids: parseIDs(ids), market: market }
+         query: { ids: parseIDs(ids).join(","), market: market }
       })
    }
 
@@ -1052,7 +1052,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/episodes`,
-         query: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -1070,7 +1070,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/episodes`,
-         query: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -1088,7 +1088,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/episodes/contains`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1154,7 +1154,7 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {String | Array<String>=} device_ids An array containing the ID of the device on which playback should be started/transferred.
+    * @param {String | Array<String>=} device_ids A string or an array containing the ID of the device on which playback should be started/transferred.
     * @param {Object} opts Optional settings
     * @param {Boolean=} opts.play Whether to ensure playback happens on new device. Otherwise keep the current playback state.
     * @returns {Promise} Playback transferred.
@@ -1163,7 +1163,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/player`,
-         body: { device_ids: JSON.stringify(device_ids), play: play }
+         body: { device_ids: parseIDs(device_ids), play: play }
       })
    }
 
@@ -1223,12 +1223,7 @@ class SpotifyAPI
       return this.request({
          method: "PUT", endpoint: `/me/player/play`,
          query: { device_id: device_id },
-         body: {
-            context_uri: SpotifyAPI.isValidURL(context_uri) ? SpotifyAPI.parseURL(context_uri).uri : context_uri,
-            uris: SpotifyAPI.isValidURL(uris) ? JSON.stringify( [uris].flat().map(uri => SpotifyAPI.parseURL(uri).uri) ) : uris,
-            offset: offset,
-            position_ms: position_ms
-         }
+         body: { context_uri: parseURIs(context_uri), uris: parseURIs(uris), offset: offset, position_ms: position_ms }
       })
    }
 
@@ -1449,7 +1444,7 @@ class SpotifyAPI
    getPlaylist(playlist_id, { market=this.defaultMarket, fields, additional_types } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}`,
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}`,
          query: { market: market, fields: fields?.join?.(",") ?? fields, additional_types: additional_types?.join?.(",") ?? additional_types }
       })
    }
@@ -1473,8 +1468,8 @@ class SpotifyAPI
    changePlaylistDetails(playlist_id, { name, public_playlist, collaborative, description } = {})
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}`,
-         query: { name: name, public: public_playlist, collaborative: collaborative, description: description }
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}`,
+         body: { name: name, public: public_playlist, collaborative: collaborative, description: description }
       })
    }
 
@@ -1497,7 +1492,7 @@ class SpotifyAPI
    getPlaylistItems(playlist_id, { market=this.defaultMarket, fields, limit, offset, additional_types } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
          query: { market: market, fields: fields?.join?.(",") ?? fields, limit: limit, offset: offset, additional_types: additional_types?.join?.(",") ?? additional_types }
       })
    }
@@ -1522,9 +1517,8 @@ class SpotifyAPI
    updatePlaylistItems(playlist_id, { uris, range_start, insert_before, range_length, snapshot_id } = {})
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
-         query: { uris: parseURIs(uris) },
-         body: { range_start: range_start, insert_before: insert_before, range_length: range_length, snapshot_id: snapshot_id }
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
+         body: { uris: parseURIs(uris), range_start: range_start, insert_before: insert_before, range_length: range_length, snapshot_id: snapshot_id }
       })
    }
 
@@ -1542,11 +1536,11 @@ class SpotifyAPI
     * @param {String | Array<String>=} opts.uris A single string or an array of Spotify URLs or URIs to add, can be track or episode URIs.
     * @returns {Promise} A snapshot ID for the playlist.
     */
-   addItemsToPlaylist(playlist_id, { position, uris } = {})
+   addItemsToPlaylist(playlist_id, { uris, position } = {})
    {
       return this.request({
-         method: "POST", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
-         query: { position: position, uris: parseURIs(uris) }
+         method: "POST", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
+         body: { uris: parseURIs(uris), position: position }
       })
    }
 
@@ -1567,8 +1561,8 @@ class SpotifyAPI
    removePlaylistItems(playlist_id, { tracks, snapshot_id } = {})
    {
       return this.request({
-         method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)}/tracks`,
-         query: { tracks: [tracks].flat(), snapshot_id: snapshot_id }
+         method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
+         body: { tracks: [tracks].flat(), snapshot_id: snapshot_id }
       })
    }
 
@@ -1609,7 +1603,7 @@ class SpotifyAPI
    getUserPlaylist(user_id, { limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/users/${parseIDs(user_id)}/playlists`,
+         method: "GET", endpoint: `/users/${parseIDs(user_id)[0]}/playlists`,
          query: { limit: limit, offset: offset }
       })
    }
@@ -1633,7 +1627,7 @@ class SpotifyAPI
    createPlaylist(user_id, { name, public_playlist, collaborative, description } = {})
    {
       return this.request({
-         method: "POST", endpoint: `/users/${parseIDs(user_id)}/playlists`,
+         method: "POST", endpoint: `/users/${parseIDs(user_id)[0]}/playlists`,
          body: { name: name, public: public_playlist, collaborative: collaborative, description: description }
       })
    }
@@ -1654,7 +1648,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/browse/featured-playlists`,
-         body: { country: country, locale: locale, timestamp: timestamp, limit: limit, offset: offset }
+         query: { country: country, locale: locale, timestamp: timestamp, limit: limit, offset: offset }
       })
    }
 
@@ -1672,8 +1666,8 @@ class SpotifyAPI
    getCategoryPlaylists(category_id, { country, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/browse/categories/${parseIDs(category_id)}/playlists`,
-         body: { country: country, limit: limit, offset: offset }
+         method: "GET", endpoint: `/browse/categories/${parseIDs(category_id)[0]}/playlists`,
+         query: { country: country, limit: limit, offset: offset }
       })
    }
 
@@ -1687,7 +1681,7 @@ class SpotifyAPI
    getPlaylistCoverImage(playlist_id)
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}/images`
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/images`
       })
    }
 
@@ -1710,7 +1704,7 @@ class SpotifyAPI
    addCustomPlaylistCoverImage(playlist_id, { image } = {})
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/images`,
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/images`,
          body: image
       })
    }
@@ -1754,7 +1748,7 @@ class SpotifyAPI
    getShow(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/shows/${parseIDs(id)}`,
+         method: "GET", endpoint: `/shows/${parseIDs(id)[0]}`,
          query: { market: market }
       })
    }
@@ -1772,7 +1766,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/shows`,
-         query: { ids: parseIDs(ids), market: market }
+         query: { ids: parseIDs(ids).join(","), market: market }
       })
    }
 
@@ -1790,7 +1784,7 @@ class SpotifyAPI
    getShowEpisodes(id, { market=this.defaultMarket, limit, offset } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/shows/${parseIDs(id)}/episodes`,
+         method: "GET", endpoint: `/shows/${parseIDs(id)[0]}/episodes`,
          query: { market: market, limit: limit, offset: offset }
       })
    }
@@ -1829,7 +1823,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/shows`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1849,7 +1843,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/shows`,
-         query: { ids: parseIDs(ids), market: market }
+         query: { ids: parseIDs(ids).join(","), market: market }
       })
    }
 
@@ -1867,7 +1861,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/shows/contains`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1886,7 +1880,7 @@ class SpotifyAPI
    getTrack(id, { market=this.defaultMarket } = {})
    {
       return this.request({
-         method: "GET", endpoint: `/tracks/${parseIDs(id)}`,
+         method: "GET", endpoint: `/tracks/${parseIDs(id)[0]}`,
          query: { market: market }
       })
    }
@@ -1904,7 +1898,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/tracks`,
-         query: { ids: parseIDs(ids), market: market }
+         query: { ids: parseIDs(ids).join(","), market: market }
       })
    }
 
@@ -1943,7 +1937,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/tracks`,
-         query: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -1961,7 +1955,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/tracks`,
-         query: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -1979,7 +1973,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/tracks/contains`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1994,7 +1988,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/audio-features`,
-         query: { ids: parseIDs(ids) }
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -2008,7 +2002,7 @@ class SpotifyAPI
    getTrackAudioFeatures(id)
    {
       return this.request({
-         method: "GET", endpoint: `/audio-features/${parseIDs(id)}`
+         method: "GET", endpoint: `/audio-features/${parseIDs(id)[0]}`
       })
    }
 
@@ -2022,7 +2016,7 @@ class SpotifyAPI
    getTrackAudioAnalysis(id)
    {
       return this.request({
-         method: "GET", endpoint: `/audio-analysis/${parseIDs(id)}`
+         method: "GET", endpoint: `/audio-analysis/${parseIDs(id)[0]}`
       })
    }
 
@@ -2172,7 +2166,7 @@ class SpotifyAPI
    getUserProfile(user_id)
    {
       return this.request({
-         method: "GET", endpoint: `/users/${parseIDs(user_id)}`
+         method: "GET", endpoint: `/users/${parseIDs(user_id)[0]}`
       })
    }
 
@@ -2192,7 +2186,7 @@ class SpotifyAPI
    followPlaylist(playlist_id, { public_playlist } = {})
    {
       return this.request({
-         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)}/followers`,
+         method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/followers`,
          body: { public: public_playlist }
       })
    }
@@ -2211,7 +2205,7 @@ class SpotifyAPI
    unfollowPlaylist(playlist_id)
    {
       return this.request({
-         method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)}/followers`
+         method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/followers`
       })
    }
 
@@ -2232,7 +2226,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/following`,
-         query: { type: type, after: parseIDs(after), limit: limit }
+         query: { type: type, after: parseIDs(after)[0], limit: limit }
       })
    }
 
@@ -2251,7 +2245,8 @@ class SpotifyAPI
    {
       return this.request({
          method: "PUT", endpoint: `/me/following`,
-         query: { type: type, ids: parseIDs(ids) }
+         query: { type: type },
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -2270,7 +2265,8 @@ class SpotifyAPI
    {
       return this.request({
          method: "DELETE", endpoint: `/me/following`,
-         query: { type: type, ids: parseIDs(ids) }
+         query: { type: type },
+         body: { ids: parseIDs(ids) }
       })
    }
 
@@ -2289,7 +2285,7 @@ class SpotifyAPI
    {
       return this.request({
          method: "GET", endpoint: `/me/following/contains`,
-         query: { type: type, ids: parseIDs(ids) }
+         query: { type: type, ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -2304,8 +2300,8 @@ class SpotifyAPI
    checkIfUsersFollowPlaylist(playlist_id, ids)
    {
       return this.request({
-         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)}/followers/contains`,
-         query: { ids: parseIDs(ids) }
+         method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/followers/contains`,
+         query: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -2422,7 +2418,7 @@ function parseIDs(ids)
    {
       try { return SpotifyAPI.parseURL(id).id }
       catch { return id }
-   }).join(",")
+   })
 }
 function parseURIs(uris)
 {
@@ -2430,7 +2426,7 @@ function parseURIs(uris)
    {
       try { return SpotifyAPI.parseURL(uri).uri }
       catch { return uri }
-   }).join(",")
+   })
 }
 
 module.exports = SpotifyAPI

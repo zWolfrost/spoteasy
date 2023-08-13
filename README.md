@@ -240,6 +240,11 @@ app.get("/login", async (req, res) => {
 <br>- Made "searchTrack" method return the actual response, not only the parsed track (This will also affect the "getMagic" method).
 <br>- Fixed bug where a track object with no external url would crash "trackParser".
 
+- **v2.1.0**:
+<br>- Updated shorthands so that they use body instead of query when possible to send requests (to avoid exceeding the maximum length of the request URI).
+<br>- Fixed bugs where a lot of Playlists related shorthands used body instead of query to send requests or viceversa, making them unusable.
+<br>- Fixed bugs where some shorthands wouldn't parse given URLs/URIs
+
 
 &nbsp;
 ## Found a bug and/or need help?

@@ -617,7 +617,7 @@ declare class SpotifyAPI {
      * Might require the following authorization scopes:
      * - "user-modify-playback-state"
      *
-     * @param {String | Array<String>=} device_ids An array containing the ID of the device on which playback should be started/transferred.
+     * @param {String | Array<String>=} device_ids A string or an array containing the ID of the device on which playback should be started/transferred.
      * @param {Object} opts Optional settings
      * @param {Boolean=} opts.play Whether to ensure playback happens on new device. Otherwise keep the current playback state.
      * @returns {Promise} Playback transferred.
@@ -917,7 +917,7 @@ declare class SpotifyAPI {
      * @param {String | Array<String>=} opts.uris A single string or an array of Spotify URLs or URIs to add, can be track or episode URIs.
      * @returns {Promise} A snapshot ID for the playlist.
      */
-    addItemsToPlaylist(playlist_id: string, { position, uris }?: {
+    addItemsToPlaylist(playlist_id: string, { uris, position }?: {
         position?: number | undefined;
         uris?: (string | Array<string>) | undefined;
     }): Promise<any>;
