@@ -432,14 +432,15 @@ class SpotifyAPI
    /**
     * The "{@link request}" method default parser.
     *
-    * If tracks are found, this parser will add a "parsed_tracks" property to the response which is an array of EVERY track found in it, even episodes.
+    * If tracks are found, this parser will add a "parsed_tracks" property to the response which is an array of EVERY track or episode found in it.
     *
     * Then it will also add some handy properties to every track in this array:
+    * @param album If getting a whole album, this album property will be a circular reference to the response album;
     * @param authors An array of all the artists' names;
     * @param cover The track cover (points to the album cover if the track is part of one);
-    * @param query A string of relevant track words (title, artists and album) separated by a space for searching purposes
-    * @param title Same as query, but the relevant information is separated by relevant characters for displaying purposes, e.g. "Title - Artist1, Artist2 (Album)"
-    * @param url Shorthand for external_urls.spotify (the track's Spotify URL)
+    * @param query A string of relevant track words (title, artists and album) separated by a space for searching purposes;
+    * @param title Same as query, but the relevant information is separated by relevant characters for displaying purposes, e.g. "Title - Artist1, Artist2 (Album)";
+    * @param url Shorthand for external_urls.spotify (the track's Spotify URL).
     *
     * @returns {Object} A parsed response
     */

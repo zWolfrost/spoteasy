@@ -1,3 +1,3 @@
 export = tracksParser;
-declare function tracksParser(item: any): any;
+declare function tracksParser(response: any): any;
 //# sourceMappingURL=tracksParser.d.ts.map

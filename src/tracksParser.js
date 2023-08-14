@@ -1,54 +1,94 @@
-function tracksParser(item)
+function tracksParser(response)
 {
-   let foundTracks = filterObject(item, (obj) => obj.type == "track" | obj.type == "episode")
+   let isList = (obj) => ["album", "show", "audiobook"].includes(obj.type)
+   let isItem = (obj) => ["track", "episode", "chapter"].includes(obj.type)
 
-   if (foundTracks.length == 0) return item
 
-   switch(item.type)
+   let parsedItems = []
+
+
+   /* Lists */
+
+   let foundLists = extractObjects(response, isList)
+
+   for (list of foundLists)
    {
-      case "album":
-         foundTracks = foundTracks.map(track =>
-         {
-            track.album = item
-            return parseTrackObject(track)
-         })
-         break;
+      let foundItems = extractObjects(list, isItem)
 
-      case "show":
-         foundTracks = foundTracks.map(track =>
-         {
-            track.album = item
-            return parseTrackObject(track)
-         })
-         break;
-
-      default:
-         foundTracks = foundTracks.map(parseTrackObject)
+      for (item of foundItems)
+      {
+         parsedItems.push( parseTrackObject({...item, album: list}) )
+      }
    }
 
-   item.parsed_tracks = foundTracks
+   //console.log(`Lists added. There are ${parsedItems.length} parsed items`)
 
-   return item
+
+   /* Mixed */
+
+   let mixedResponse = filterObjects(response, (obj) => (isList(obj) && extractObjects(obj, isItem).length > 0) == false)
+   let foundMixedItems = extractObjects(mixedResponse ?? {}, isItem)
+
+   for (item of foundMixedItems)
+   {
+      parsedItems.push( parseTrackObject(item) )
+   }
+
+   //console.log(`Mixed items added. There are ${parsedItems.length} parsed items`)
+
+
+   response.parsed_tracks = parsedItems
+
+   return response
 }
 
 
-function filterObject(obj, condition)
+function extractObjects(obj, condition)
 {
    let array = []
 
-   iterateObj(obj, (obj) => {if (condition(obj)) array.push(obj)} )
+   forEachObject(obj, obj =>
+   {
+      if (condition(obj)) array.push(obj)
+   })
 
    return array
 }
-function iterateObj(obj, callback)
+function filterObjects(obj, condition)
+{
+   function forEachObjectKey(obj, callback)
+   {
+      for (let key in obj)
+      {
+         if (obj[key] && typeof obj[key] === "object")
+         {
+            callback(obj, key)
+            forEachObjectKey(obj[key], callback)
+         }
+      }
+   }
+
+   let copy = structuredClone(obj)
+
+   if (condition(copy) == false) return null
+
+   forEachObjectKey(copy, (obj, key) =>
+   {
+      if (condition(obj[key]) == false) delete obj[key]
+   })
+
+   return copy
+}
+
+function forEachObject(obj, callback)
 {
    callback(obj)
 
-   for (let key of Object.keys(obj))
+   for (let key in obj)
    {
       if (obj[key] && typeof obj[key] === "object")
       {
-         iterateObj(obj[key], callback)
+         forEachObject(obj[key], callback)
       }
    }
 }

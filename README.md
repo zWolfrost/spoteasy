@@ -35,6 +35,8 @@ spoteasy.clientCredentialsFlow("<Client ID>", "<Client Secret>")
 
 Adds a "token" property to the "spoteasy" object. The "token" property contains an object with [various useful properties](#spotifyapi-token-properties), beyond the actual access token.
 
+For security reasons, do not hardcode the client ID and Secret in your code. Consider using environment variables or configuration files.
+
 Now let's try to fetch an album from the Spotify API.
 
 ```js
@@ -97,13 +99,13 @@ Once the user has logged in, they will be redirected again to the specified "Red
 Finally, (as you will see in the next piece of code) calling the "resolveToken" method with the URL query as argument will create an access token in the "spoteasy" object, enabling us to easily create a playlist.
 ```js
 app.get("/login", async (req, res) => {
-
   // Checking if the auth code is in the URL query & if token is waiting to be resolved
   if ("code" in req.query && "resolve" in spoteasy.token) {
 
-    // Waiting for the token to resolve with the URL query
+    // Resolve the authentication code in the URL query to get the access token
     await spoteasy.resolveToken(req.query)
 
+    // Successful Login
     res.status(200).send({ info: "Login completed" })
 
     // The ID of the current user can be obtained via the Get Current User's Profile endpoint
@@ -245,7 +247,12 @@ app.get("/login", async (req, res) => {
 <br>- Fixed bugs where a lot of Playlists related shorthands used body instead of query to send requests or viceversa, making them unusable.
 <br>- Fixed bugs where some shorthands wouldn't parse given URLs/URIs
 
+- **v2.2.0**:
+<br>- Added "trackParser" support for getting several albums. This might also generally fix some bugs with the parser, as the previously used method was changed to a more flexible one.
+
 
 &nbsp;
 ## Found a bug and/or need help?
 Please [open an issue](https://github.com/zWolfrost/spoteasy/issues) on Github to request a change, report a bug or ask for help about something and i will gladly look into it.
+
+If you like this library, consider giving it a star on [Github](https://github.com/zWolfrost/spoteasy). It means a lot :)
