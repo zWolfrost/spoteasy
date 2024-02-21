@@ -1,21 +1,21 @@
-function tracksParser(response)
+function tracksParser(response: any)
 {
-   let isList = (obj) => ["album", "show", "audiobook"].includes(obj.type)
-   let isItem = (obj) => ["track", "episode", "chapter"].includes(obj.type)
+   let isList = (obj: any) => ["album", "show", "audiobook"].includes(obj.type)
+   let isItem = (obj: any) => ["track", "episode", "chapter"].includes(obj.type)
 
 
-   let parsedItems = []
+   let parsedItems: any[] = []
 
 
    /* Lists */
 
    let foundLists = extractObjects(response, isList)
 
-   for (list of foundLists)
+   for (let list of foundLists)
    {
       let foundItems = extractObjects(list, isItem)
 
-      for (item of foundItems)
+      for (let item of foundItems)
       {
          parsedItems.push( parseTrackObject({...item, album: list}) )
       }
@@ -26,10 +26,10 @@ function tracksParser(response)
 
    /* Mixed */
 
-   let mixedResponse = filterObjects(response, (obj) => (isList(obj) && extractObjects(obj, isItem).length > 0) == false)
+   let mixedResponse = filterObjects(response, (obj: any) => (isList(obj) && extractObjects(obj, isItem).length > 0) == false)
    let foundMixedItems = extractObjects(mixedResponse ?? {}, isItem)
 
-   for (item of foundMixedItems)
+   for (let item of foundMixedItems)
    {
       parsedItems.push( parseTrackObject(item) )
    }
@@ -43,20 +43,20 @@ function tracksParser(response)
 }
 
 
-function extractObjects(obj, condition)
+function extractObjects(obj: any, condition: Function)
 {
-   let array = []
+   let array: any[] = []
 
-   forEachObject(obj, obj =>
+   forEachObject(obj, (obj: any) =>
    {
       if (condition(obj)) array.push(obj)
    })
 
    return array
 }
-function filterObjects(obj, condition)
+function filterObjects(obj: any, condition: Function)
 {
-   function forEachObjectKey(obj, callback)
+   function forEachObjectKey(obj: any, callback: Function)
    {
       for (let key in obj)
       {
@@ -72,7 +72,7 @@ function filterObjects(obj, condition)
 
    if (condition(copy) == false) return null
 
-   forEachObjectKey(copy, (obj, key) =>
+   forEachObjectKey(copy, (obj: any, key: string) =>
    {
       if (condition(obj[key]) == false) delete obj[key]
    })
@@ -80,7 +80,7 @@ function filterObjects(obj, condition)
    return copy
 }
 
-function forEachObject(obj, callback)
+function forEachObject(obj: any, callback: Function)
 {
    callback(obj)
 
@@ -94,7 +94,7 @@ function forEachObject(obj, callback)
 }
 
 
-function parseTrackObject(track)
+function parseTrackObject(track: any)
 {
    let info = {
       ...track,
@@ -119,18 +119,18 @@ function parseTrackObject(track)
 
    return info
 }
-function parseArtistsObject(artists)
+function parseArtistsObject(artists: any)
 {
-   return artists?.map(art =>
+   return artists?.map((art: any) =>
    {
       art.url = art.external_urls?.spotify ?? undefined
       return art
    })
 }
-function getAuthors(artists)
+function getAuthors(artists: any)
 {
-   return artists?.map(art => art.name)
+   return artists?.map((art: any) => art.name)
 }
 
 
-module.exports = tracksParser
+export = tracksParser

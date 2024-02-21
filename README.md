@@ -69,48 +69,47 @@ spoteasy.getAlbum("https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ")
 
 &nbsp;
 ### [Authorization Code PKCE Flow](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
-Now let's create a playlist in a logged user's account. To do this, we have to make the user log in into his spotify account. The next examples will use the express.js library to do that.
-(Note: they are very barebones implementations, useful only for explanation purposes.)
+Now let's create a playlist in a logged user's account. To do this, we have to make the user log in into his spotify account. The next example will use the express.js library to do that.
+(Note: it's a very barebones implementation, useful only for explanation purposes.)
 
 <img src="https://i.imgur.com/jqrXNCI.png" alt="Spotify Create Playlist Docs - Authorization Scopes" width="1000"/>
 
-As you can see (and can also be seen from the JSDOC documentation), it's stated that to do that we need two [authorization scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes): "playlist-modify-public" and "playlist-modify-private". We can pass them as arguments in the authorization code PKCE method, like any other token creation method (except for client credentials).
+As you can see (and can also be seen from the JSDOC documentation), it's stated that to do that we need two [authorization scopes](https://developer.spotify.com/documentation/web-api/concepts/scopes): "playlist-modify-public" and "playlist-modify-private". These tell spotify what we are about to do with the user's account. We can pass them as arguments in the authorization code PKCE method.
 
 ```js
 const SpotifyAPI = require("spoteasy")
 let spoteasy = new SpotifyAPI()
 
 app.get("/auth", async (req, res) => {
+  // If the URL query is empty (thus user hasn't logged in yet).
+  if (Object.keys(req.query).length === 0) {
+    // Create the Spotify authentication URL, using the authorization code PKCE flow.
+    let url = spoteasy.authorizationCodePKCEFlow(
+      // Your Spotify Client ID.
+      "<Client ID>",
+      // Redirect back to this URL after the user logs in.
+      // WARNING! you must whitelist this URL in the redirect URI section of the spotify app settings.
+      "https://whatever.webpage.com/auth",
+      {
+        // The scopes that the user will be asked to authorize.
+        scope: ["playlist-modify-public", "playlist-modify-private"]
+      }
+    )
 
-  let url = spoteasy.authorizationCodePKCEFlow(
-    "<Client ID>",
-    "<Redirect URL>", //WARNING! you must whitelist this URL in the redirect URI section of the spotify app settings
-    {
-      scope: ["playlist-modify-public", "playlist-modify-private"]
-    }
-  )
-
-  //This will redirect the user to the Spotify login page, where they can log in
-  res.redirect(200, url)
-})
-```
-Once the user has logged in, they will be redirected again to the specified "Redirect URL" parameter with a code in the url query, which needs to be passed as an argument to the "resolveToken" method.
-
-Finally, (as you will see in the next piece of code) calling the "resolveToken" method with the URL query as argument will create an access token in the "spoteasy" object, enabling us to easily create a playlist.
-```js
-app.get("/login", async (req, res) => {
-  // Checking if the auth code is in the URL query & if token is waiting to be resolved
-  if ("code" in req.query && "resolve" in spoteasy.token) {
-
-    // Resolve the authentication code in the URL query to get the access token
+    // Redirect the user to the Spotify authentication page.
+    res.status(100).redirect(url)
+  }
+  // If the auth code is in the URL query (thus user was redirected back from the spotify auth page).
+  // & if the token is waiting to be resolved.
+  else if ("code" in req.query && "resolve" in spoteasy.token) {
+    // Resolve the authentication code in the URL query to finally create the access token.
     await spoteasy.resolveToken(req.query)
 
-    // Successful Login
-    res.status(200).send({ info: "Login completed" })
-
+    // We are now logged in. Let's create a playlist.
     // The ID of the current user can be obtained via the Get Current User's Profile endpoint
     let currentUser = await spoteasy.getCurrentUserProfile()
 
+    // Create a playlist in the user's account.
     let response = await spoteasy.createPlaylist(currentUser.id, {
       name: "Hello World",
       public_playlist: false,
@@ -119,10 +118,14 @@ app.get("/login", async (req, res) => {
 
     // Print out the url of the just created playlist
     console.log( response.external_urls.spotify )
+
+    // Do whatever after the user logs in.
+    res.status(202).redirect("https://whatever.webpage.com/")
   }
-  // If user rejected the authentication request
-  else if ("error" in req.query) {
-    res.status(401).send({ error: "Login rejected" })
+  // If user rejected the authentication request.
+  else {
+    // Do whatever after the user rejects the authentication request.
+    res.status(401).redirect("https://whatever.webpage.com/")
   }
 })
 ```
@@ -249,6 +252,13 @@ app.get("/login", async (req, res) => {
 
 - **v2.2.0**:
 <br>- Added "trackParser" support for getting several albums. This might also generally fix some bugs with the parser, as the previously used method was changed to a more flexible one.
+
+- **v3.0.0**:
+<br>- Completely migrated to TypeScript.
+<br>- Updated parameters to the ones accepted by current Spotify API.
+<br>- Made "name" parameter in the "createPlaylist" method mandatory, and moved it out of the "options" object.
+<br>- Made "seed_artists", "seed_genres" and "seed_tracks" parameters in the "getRecommendations" method optional, and moved them in the "options" object.
+<br>- Fixed wrong parameter types & a few bugs.
 
 
 &nbsp;

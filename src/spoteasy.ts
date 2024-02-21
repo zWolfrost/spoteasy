@@ -1,37 +1,57 @@
-"use strict"
+interface Token {
+   access_token?: string,
+   token_type?: string,
+   expires_in?: number,
+   expires_in_ms?: number,
+   expire_time?: number,
+   scope?: string[],
+   refresh_token?: string,
+   refresh_timeout?: any,
+   expires_now_in?: any,
+   is_expired?: any,
+   auto_refresh?: any,
+   refresh?: Function,
+   promise?: Promise<any>,
+   resolve?: Function,
+   url?: string,
+   error?: string,
+   error_description?: string,
+}
+
+interface ParsedURL {
+   hostname?: string,
+   query?: any,
+   type?: string,
+   id?: string,
+   endpoint?: string,
+   uri?: string,
+}
+
 
 /**
  * An Object containing useful methods to create a Spotify Token and make calls to Spotify API.
  *
- * After a token has been created, this object will contain in addition to the settings provided in the constructor, a token object:
- *
- * @param {Object}                 token - A SpotifyAPI token object
- * @param {String}    token.access_token - The actual access token
- * @param {String}      token.token_type - The token type (e.g. "Bearer")
- * @param {Number}      token.expires_in - The amount of seconds that the token can be used for before it expires, starting from its creation
- * @param {Number}   token.expires_in_ms - The amount of milliseconds that the token can be used for before it expires, starting from its creation
- * @param {Number}     token.expire_time - The Date.now() milliseconds on which the token will expire
- * @param {Array<String>}    token.scope - An array of the allowed authorization scopes
- * @param {Object} token.refresh_timeout - The Timeout object of the auto refresh
- * @param {Number}  token.expires_now_in - (Getter) The amount of milliseconds that the token can be used for before it expires, starting from now
- * @param {Boolean}     token.is_expired - (Getter) Whether the token is expired
- * @param {Boolean}   token.auto_refresh - (Getter/Setter) Whether the token is going to automatically refresh when expired
- * @param {Promise}        token.promise - When creating or refreshing token, this will be the fetch request Promise
- *
- * @param {String}  token.error             - If the token creation was unsuccessful, displays the type of error encountered
- * @param {String}  token.error_description - If the token creation was unsuccessful, displays the description of the error encountered
+ * After a token is created, the SpotifyAPI object will contain, in addition to the settings provided in the constructor, a "token" object, with the authentication codes to make requests to the Spotify API.
  */
 class SpotifyAPI
 {
+   token: Token;
+   autoRefreshToken: boolean;
+   precautionSeconds: number;
+   awaitToken: boolean;
+   responseParser: Function;
+   defaultMarket: string;
+
+
    /**
     * Creates a SpotifyAPI object with the provided settings. You can also edit these settings after its creation.
-    * @param {Object} opts Optional settings
-    * @param {Boolean} opts.autoRefreshToken Whether to set the token to auto-refresh when expired on its creation.
-    * @param {Number} opts.precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
-    * @param {Boolean} opts.awaitToken If true, and a token creation is in progress, makes any request wait for the token to be created before continuing.
-    * @param {Function} opts.responseParser The response parser to apply to any API response.
-    * @param {String} opts.defaultMarket The default country market to apply to requests options.
-    * @returns {SpotifyAPI} A SpotifyAPI object.
+    * @param opts Optional settings
+    * @param opts.autoRefreshToken Whether to set the token to auto-refresh when expired on its creation.
+    * @param opts.precautionSeconds Seconds to tick off of token.expires_in to try refresh the token in advance before it expires. Recommended 2 to 5.
+    * @param opts.awaitToken If true, and a token creation is in progress, makes any request wait for the token to be created before continuing.
+    * @param opts.responseParser The response parser to apply to any API response.
+    * @param opts.defaultMarket The default country market to apply to requests options.
+    * @returns A SpotifyAPI object.
     */
    constructor({
       autoRefreshToken=true,
@@ -39,6 +59,12 @@ class SpotifyAPI
       awaitToken=true,
       responseParser=SpotifyAPI.tracksParser,
       defaultMarket="US"
+   }: {
+      autoRefreshToken?: boolean,
+      precautionSeconds?: number,
+      awaitToken?: boolean,
+      responseParser?: Function,
+      defaultMarket?: string
    }={})
    {
       this.token = {}
@@ -60,15 +86,15 @@ class SpotifyAPI
     *
     * After the authentication, get a token by calling {@link resolveToken} with the redirect URL query
     *
-    * @param {String} clientID The Spotify app Client ID
-    * @param {String} clientSecret The Spotify app Client Secret
-    * @param {String} redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
-    * @param {Object} opts Optional settings
-    * @param {Array<String>=} opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
-    * @param {Boolean=} opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
-    * @returns {String} Returns the URL that the user has to open to authenticate.
+    * @param clientID The Spotify app Client ID
+    * @param clientSecret The Spotify app Client Secret
+    * @param redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
+    * @param opts Optional settings
+    * @param opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
+    * @param opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
+    * @returns Returns the URL that the user has to open to authenticate.
     */
-   authorizationCodeFlow(clientID, clientSecret, redirectURI, {scope=[], show_dialog=false}={})
+   authorizationCodeFlow(clientID: string, clientSecret: string, redirectURI: string, { scope=[], show_dialog=false }: { scope?: string[], show_dialog?: boolean } = {}): string
    {
       let refreshFun = () =>
       {
@@ -94,7 +120,7 @@ class SpotifyAPI
 
       this.token.promise = new Promise(resolve =>
       {
-         this.token.resolve = async authCode =>
+         this.token.resolve = async (authCode: any) =>
          {
             let request = createPostRequest(
                {
@@ -122,14 +148,14 @@ class SpotifyAPI
     *
     * After the authentication, get a token by calling {@link resolveToken} with the redirect URL query
     *
-    * @param {String} clientID The Spotify app Client ID
-    * @param {String} redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
-    * @param {Object} opts Optional settings
-    * @param {Array<String>=} opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
-    * @param {Boolean=} opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
-    * @returns {String} Returns the URL that the user has to open to authenticate.
+    * @param clientID The Spotify app Client ID
+    * @param redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
+    * @param opts Optional settings
+    * @param opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
+    * @param opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
+    * @returns Returns the URL that the user has to open to authenticate.
     */
-   authorizationCodePKCEFlow(clientID, redirectURI, {scope=[], show_dialog=false}={})
+   authorizationCodePKCEFlow(clientID: string, redirectURI: string, { scope=[], show_dialog=false }: { scope?: string[], show_dialog?: boolean } = {}): string
    {
       let refreshFun = () =>
       {
@@ -152,7 +178,7 @@ class SpotifyAPI
          }
       }
 
-      function generateCodeChallenge(codeVerifier)
+      function generateCodeChallenge(codeVerifier: string)
       {
          const encoder = new TextEncoder();
          const data = encoder.encode(codeVerifier);
@@ -166,7 +192,7 @@ class SpotifyAPI
 
       this.token.promise = new Promise(resolve =>
       {
-         this.token.resolve = async authCode =>
+         this.token.resolve = async (authCode: any) =>
          {
             let request = createPostRequest(
                {
@@ -194,15 +220,15 @@ class SpotifyAPI
     *
     * Sets the created token's properties to the SpotifyAPI object "token" property
     *
-    * @param {String} clientID The Spotify app Client ID
-    * @param {String} clientSecret The Spotify app Client Secret
-    * @returns {Promise} Returns the SpotifyAPI object "token" property
+    * @param clientID The Spotify app Client ID
+    * @param clientSecret The Spotify app Client Secret
+    * @returns Returns the SpotifyAPI object "token" property
     */
-   clientCredentialsFlow(clientID, clientSecret)
+   clientCredentialsFlow(clientID: string, clientSecret: string): Promise<Token>
    {
       let refreshFun = () =>
       {
-         this.clientCredentialsFlow(...arguments)
+         this.clientCredentialsFlow(clientID, clientSecret);
       }
 
       let request = createPostRequest(
@@ -226,26 +252,26 @@ class SpotifyAPI
     *
     * After the authentication, set the token by calling {@link setToken} with the redirect URL query
     *
-    * @param {String} clientID The Spotify app Client ID
-    * @param {String} redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
-    * @param {Object} opts Optional settings
-    * @param {Array<String>=} opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
-    * @param {Boolean=} opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
-    * @returns {String} Returns the URL that the user has to open to authenticate.
+    * @param clientID The Spotify app Client ID
+    * @param redirectURI The URI to which the user will be redirected after completing the authentication (WARNING: you must whitelist this url in the spotify app settings)
+    * @param opts Optional settings
+    * @param opts.scope A string array of the desired allowed authorization scopes (see: {@link https://developer.spotify.com/documentation/web-api/concepts/scopes Scopes})
+    * @param opts.show_dialog Whether or not to force the user to approve the app again if they've already done so
+    * @returns Returns the URL that the user has to open to authenticate.
     */
-   implicitGrantFlow(clientID, redirectURI, {scope=[], show_dialog=false}={})
+   implicitGrantFlow(clientID: string, redirectURI: string, { scope=[], show_dialog=false }: { scope?: string[], show_dialog?: boolean } = {}): string
    {
       this.token.promise = new Promise(resolve =>
       {
-         this.token.resolve = async (...args) =>
+         this.token.resolve = async (...args: any[]) =>
          {
-            resolve(this.setToken(...args))
+            resolve(this.setToken(args))
 
             return this.token
          }
       })
 
-      return this.token.url = SpotifyAPI.getAuthURL("token", clientID, redirectURI, {scope: scope, show_dialog: show_dialog})
+      return this.token.url = getAuthURL("token", clientID, redirectURI, {scope: scope, show_dialog: show_dialog})
    }
 
 
@@ -253,11 +279,11 @@ class SpotifyAPI
 
    /**
     * Requests a Spotify Access Token based on a request
-    * @param {Object} request The request to make to get the token
-    * @returns {Promise} Returns the Promise of the Spotify API token
+    * @param request The request to make to get the token
+    * @returns Returns the Promise of the Spotify API token
     * @throws Error if response has an "error" property.
     */
-   async requestToken(request)
+   async requestToken(request: any): Promise<Token>
    {
       let res = await fetch("https://accounts.spotify.com/api/token", request).then(res => res.json())
 
@@ -267,11 +293,12 @@ class SpotifyAPI
    }
 
    /**
-    * Sets the token with the provided properties
-    * @param {Object} properties The properties to set to the token
-    * @returns {Object} Returns the SpotifyAPI object "token" property
+    * Sets the token with the provided properties. Use this method to set a token manually.
+    * The bare minimum properties to create a token are "access_token" and "expires_in".
+    * @param properties The properties to set to the token
+    * @returns Returns the SpotifyAPI object "token" property
     */
-   setToken(properties)
+   setToken(properties: any): Token
    {
       properties.expires_in -= this.precautionSeconds
 
@@ -282,8 +309,8 @@ class SpotifyAPI
 
          expires_in_ms: properties.expires_in*1000,
          expire_time: Date.now() + properties.expires_in*1000,
-         get expires_now_in() { return this.expire_time - Date.now() },
-         get is_expired() { return Date.now() > this.expire_time },
+         get expires_now_in() { return (this.expire_time ?? 0) - Date.now() },
+         get is_expired() { return Date.now() > (this.expire_time ?? 0) },
          get auto_refresh() { return Boolean(this.refresh_timeout) },
          set auto_refresh(bool)
          {
@@ -291,7 +318,7 @@ class SpotifyAPI
             {
                if (bool)
                {
-                  this.refresh_timeout = setTimeout(() => this?.refresh(), this.expires_now_in)
+                  this.refresh_timeout = setTimeout(() => this.refresh?.(), this.expires_now_in)
                }
                else
                {
@@ -309,18 +336,18 @@ class SpotifyAPI
 
    /**
     * This method has to be called after using a Grant Flow that gives you an authentication code in the URL query.
-    * @param {Object} query The URL query parameters.
-    * @returns {Promise} Returns the SpotifyAPI object "token" property.
+    * @param query The URL query parameters.
+    * @returns Returns the SpotifyAPI object "token" property.
     * @throws Error if query is invalid.
     */
-   async resolveToken(query)
+   async resolveToken(query: any): Promise<Token>
    {
       let queryobj = objectFromQuery(query)
       if (queryobj[query] !== "") query = objectFromQuery(query)
 
       try
       {
-         return this.token.resolve(query)
+         return this.token.resolve?.(query)
       }
       catch
       {
@@ -330,10 +357,10 @@ class SpotifyAPI
 
    /**
     * Tries to refresh the token using its "refresh" method
-    * @returns {Promise} Returns the SpotifyAPI object "token" property, or "null" if the token wasn't refreshed by the operation (Spotify API limits refreshes)
+    * @returns Returns the SpotifyAPI object "token" property, or "null" if the token wasn't refreshed by the operation (Spotify API limits refreshes)
     * @throws Error if there is no token or if token has an "error" property at the end of the refresh.
     */
-   async refreshToken()
+   async refreshToken(): Promise<Token | null>
    {
       let prevToken;
 
@@ -346,7 +373,7 @@ class SpotifyAPI
          throw Error("There is no token to refresh")
       }
 
-      await this.token?.refresh()
+      await this.token.refresh?.()
 
       if ("error" in this.token) throw Error(this.token.error_description)
       if (prevToken == this.token.access_token) return null
@@ -361,33 +388,50 @@ class SpotifyAPI
 
    /**
     * Make an API request to the spotify API with the given parameters
+    *
     * @example spoteasy.request({
-    *    url: "https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ?si=4f75fc27072949c2",
+    *     url: "https://open.spotify.com/album/6PFPjumGRpZnBzqnDci6qJ?si=4f75fc27072949c2",
     * })
     * // opts.url => opts.endpoint = `/albums/${id}`
     *
     * @example spoteasy.request({
-    *    method: "POST",
-    *    endpoint: `/users/${userID}/playlists`,
-    *    headers: {"Content-Type": "application/json"},
-    *    body: JSON.stringify({
-    *    name: "Hello World",
-    *    public: false,
-    *    description: "Your coolest playlist"
+    *     method: "POST",
+    *     endpoint: `/users/${userID}/playlists`,
+    *     headers: {"Content-Type": "application/json"},
+    *     body: JSON.stringify({
+    *     name: "Hello World",
+    *     public: false,
+    *     description: "Your coolest playlist"
     * })
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.url The URL of the spotify item, which will be converted into its respective endpoint. If a match is found, it gets prepended to the endpoint property.
-    * @param {String} opts.location The URL location to make a request at
-    * @param {String} opts.endpoint The URL endpoint to make a request at
-    * @param {Object} opts.query The query to add to the endpoint
-    * @param {String} opts.method The request method
-    * @param {Object=} opts.headers The request headers
-    * @param {any=} opts.body The request body
-    * @returns {Promise} The Promise of the response. If the response is empty, returns the response HTML status code.
+    * @param opts Optional settings
+    * @param opts.url The URL of the spotify item, which will be converted into its respective endpoint. If a match is found, it gets prepended to the endpoint property.
+    * @param opts.location The URL location to make a request at
+    * @param opts.endpoint The URL endpoint to make a request at
+    * @param opts.query The query to add to the endpoint
+    * @param opts.method The request method
+    * @param opts.headers The request headers
+    * @param opts.body The request body
+    * @returns The Promise of the response. If the response is empty, returns the response HTML status code.
     * @throws Error if response has an "error" property.
     */
-   async request( {url=undefined, location="https://api.spotify.com/v1", endpoint="", query={}, method="GET", headers=undefined, body=undefined} )
+   async request({
+      url,
+      location="https://api.spotify.com/v1",
+      endpoint="",
+      query={},
+      method="GET",
+      headers,
+      body
+   }: {
+      url?: string,
+      location?: string,
+      endpoint?: string,
+      query?: any,
+      method?: string,
+      headers?: any,
+      body?: any
+   }={}): Promise<any>
    {
       if (this.token.access_token === undefined)
       {
@@ -419,7 +463,7 @@ class SpotifyAPI
          return res.status
       }
 
-      if ("error" in res) throw new Error(res.error_description ?? res.error.message)
+      if ("error" in res) throw new Error((res as { error_description?: string }).error_description ?? (res as { error: { message: string } }).error.message)
 
       if (this.responseParser) return this.responseParser(res)
 
@@ -442,11 +486,12 @@ class SpotifyAPI
     * @param title Same as query, but the relevant information is separated by relevant characters for displaying purposes, e.g. "Title - Artist1, Artist2 (Album)";
     * @param url Shorthand for external_urls.spotify (the track's Spotify URL).
     *
-    * @returns {Object} A parsed response
+    * @returns A parsed response
     */
-   static tracksParser(...response)
+   static tracksParser(...response: any): any
    {
-      return require("./tracksParser")(...response)
+      const tracksParser = require("./tracksParser")
+      return tracksParser(...response)
    }
 
 
@@ -454,15 +499,15 @@ class SpotifyAPI
 
    /**
     * Extractes important information out of a Spotify URL
-    * @param {String} url
-    * @returns {Object} An object that contains the url "hostname", its "query" as an object, the spotify item "type" and item "id"
+    * @param url
+    * @returns An object that contains the url "hostname", its "query" as an object, the spotify item "type" and item "id"
     * @throws Error if URL is invalid or unsupported.
     */
-   static parseURL(url)
+   static parseURL(url: string): any
    {
       let urlobj = new URL(url)
 
-      let parsed = {hostname: urlobj.hostname};
+      let parsed: ParsedURL = {hostname: urlobj.hostname};
 
 
       switch (urlobj.hostname)
@@ -476,7 +521,7 @@ class SpotifyAPI
             parsed.query = objectFromQuery(urlobj.search);
             if ("ids" in parsed.query)
             {
-               parsed.type = urlobj.pathname.split("/").at(-1).slice(0, -1)
+               parsed.type = urlobj.pathname.split("/").at(-1)?.slice(0, -1)
             }
             else
             {
@@ -494,7 +539,7 @@ class SpotifyAPI
       }
 
 
-      const DEF_ENDPOINTS = {
+      const DEF_ENDPOINTS: { [key: string]: (id: any) => string } = {
          "album": id => `/albums/${id}`,
          "artist": id => `/artists/${id}`,
          "audiobook": id => `/audiobooks/${id}`,
@@ -506,7 +551,7 @@ class SpotifyAPI
          "user": id => `/users/${id}`,
       }
 
-      parsed.endpoint = parsed.type in DEF_ENDPOINTS ? DEF_ENDPOINTS[parsed.type](parsed.id) : ""
+      parsed.endpoint = (parsed.type && parsed.type in DEF_ENDPOINTS) ? DEF_ENDPOINTS[parsed.type](parsed.id) : ""
       parsed.uri = `spotify:${parsed.type}:${parsed.id}`
 
       return parsed
@@ -514,10 +559,10 @@ class SpotifyAPI
 
    /**
     * Returns true if a given string is a valid Spotify URL
-    * @param {String} string The string to verify
-    * @returns {Boolean} Whether the passed string is a valid Spotify URL
+    * @param string The string to verify
+    * @returns Whether the passed string is a valid Spotify URL
     */
-   static isValidURL(string)
+   static isValidURL(string: string): boolean
    {
       try
       {
@@ -542,12 +587,12 @@ class SpotifyAPI
     * Get Spotify catalog information for a single album.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-album Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID of the album.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} An album.
+    * @param id The Spotify URL or ID of the album.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns An album.
     */
-   getAlbum(id, { market=this.defaultMarket } = {})
+   getAlbum(id: string, { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/albums/${parseIDs(id)[0]}`,
@@ -559,12 +604,12 @@ class SpotifyAPI
     * Get Spotify catalog information for multiple albums identified by their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-albums Spotify API Reference}.
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A set of albums.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A set of albums.
     */
-   getSeveralAlbums(ids, { market=this.defaultMarket } = {})
+   getSeveralAlbums(ids: string | string[], { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/albums`,
@@ -576,14 +621,14 @@ class SpotifyAPI
     * Get Spotify catalog information about an album's tracks.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-albums-tracks Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID of the album.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of tracks.
+    * @param id The Spotify URL or ID of the album.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of tracks.
     */
-   getAlbumTracks(id, { market=this.defaultMarket, limit, offset } = {})
+   getAlbumTracks(id: string, { market=this.defaultMarket, limit, offset }: { market?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/albums/${parseIDs(id)[0]}/tracks`,
@@ -598,13 +643,13 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of albums.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of albums.
     */
-   getUserSavedAlbums({ market=this.defaultMarket, limit, offset } = {})
+   getUserSavedAlbums({ market=this.defaultMarket, limit, offset }: { market?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/albums`,
@@ -619,14 +664,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
-    * @returns {Promise} The album is saved.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
+    * @returns The album is saved.
     */
-   saveAlbumsforCurrentUser(ids)
+   saveAlbumsforCurrentUser(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/albums`,
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -637,14 +682,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
-    * @returns {Promise} Album(s) have been removed from the library.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
+    * @returns Album(s) have been removed from the library.
     */
-   removeUserSavedAlbums(ids)
+   removeUserSavedAlbums(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/me/albums`,
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -655,10 +700,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
-    * @returns {Promise} Array of booleans.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the albums. Maximum: 20 IDs.
+    * @returns Array of booleans.
     */
-   checkUserSavedAlbums(ids)
+   checkUserSavedAlbums(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/albums/contains`,
@@ -670,17 +715,16 @@ class SpotifyAPI
     * Get a list of new album releases featured in Spotify (shown, for example, on a Spotify player's "Browse" tab).
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-new-releases Spotify API Reference}.
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} A paged set of albums.
+    * @param opts Optional settings
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns A paged set of albums.
     */
-   getNewReleases({ market, limit, offset } = {})
+   getNewReleases({ limit, offset }: { limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/browse/new-releases`,
-         query: { country: market, limit: limit, offset: offset }
+         query: { limit: limit, offset: offset }
       })
    }
 
@@ -691,10 +735,10 @@ class SpotifyAPI
     * Get Spotify catalog information for a single artist identified by their unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artist Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID of the artist.
-    * @returns {Promise} An artist.
+    * @param id The Spotify URL or ID of the artist.
+    * @returns An artist.
     */
-   getArtist(id)
+   getArtist(id: string): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/artists/${parseIDs(id)[0]}`
@@ -705,10 +749,10 @@ class SpotifyAPI
     * Get Spotify catalog information for several artists based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-artists Spotify API Reference}.
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the artists. Maximum: 20 IDs.
-    * @returns {Promise} A set of artists.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the artists. Maximum: 20 IDs.
+    * @returns A set of artists.
     */
-   getSeveralArtists(ids)
+   getSeveralArtists(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/artists`,
@@ -720,19 +764,19 @@ class SpotifyAPI
     * Get Spotify catalog information about an artist's albums.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-albums Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID of the artist.
-    * @param {Object} opts Optional settings
-    * @param {String | Array<String>=} opts.include_groups A single string or an array of keywords that will be used to filter the response. If not supplied, all album types will be returned.
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of albums.
+    * @param id The Spotify URL or ID of the artist.
+    * @param opts Optional settings
+    * @param opts.include_groups A single string or an array of keywords that will be used to filter the response. If not supplied, all album types will be returned.
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of albums.
     */
-   getArtistAlbums(id, { include_groups, market=this.defaultMarket, limit, offset } = {})
+   getArtistAlbums(id: string, { include_groups, market=this.defaultMarket, limit, offset }: { include_groups?: string | string[], market?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/artists/${parseIDs(id)[0]}/albums`,
-         query: {include_groups: include_groups?.join?.(",") ?? include_groups, market: market, limit: limit, offset: offset }
+         query: {include_groups: Array.isArray(include_groups) ? include_groups.join(",") : include_groups, market: market, limit: limit, offset: offset }
       })
    }
 
@@ -740,12 +784,12 @@ class SpotifyAPI
     * Get Spotify catalog information about an artist's top tracks by country.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-top-tracks Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID of the artist.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A set of tracks.
+    * @param id The Spotify URL or ID of the artist.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A set of tracks.
     */
-   getArtistTopTracks(id, { market=this.defaultMarket } = {})
+   getArtistTopTracks(id: string, { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/artists/${parseIDs(id)[0]}/top-tracks`,
@@ -757,10 +801,10 @@ class SpotifyAPI
     * Get Spotify catalog information about artists similar to a given artist. Similarity is based on analysis of the Spotify community's listening history.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-artists-related-artists Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID of the artist.
-    * @returns {Promise} A set of artists.
+    * @param id The Spotify URL or ID of the artist.
+    * @returns A set of artists.
     */
-   getArtistRelatedArtists(id)
+   getArtistRelatedArtists(id: string): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/artists/${parseIDs(id)[0]}/related-artists`
@@ -774,12 +818,12 @@ class SpotifyAPI
     * Get Spotify catalog information for a single audiobook. Note: Audiobooks are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-an-audiobook Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the audiobook.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} An Audiobook.
+    * @param id The Spotify URL or ID for the audiobook.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns An Audiobook.
     */
-   getAudiobook(id, { market=this.defaultMarket } = {})
+   getAudiobook(id: string, { market=this.defaultMarket } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/audiobooks/${parseIDs(id)[0]}`,
@@ -791,12 +835,12 @@ class SpotifyAPI
     * Get Spotify catalog information for several audiobooks identified by their Spotify IDs. Note: Audiobooks are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-audiobooks Spotify API Reference}.
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A set of audiobooks.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A set of audiobooks.
     */
-   getSeveralAudiobooks(ids, { market=this.defaultMarket } = {})
+   getSeveralAudiobooks(ids: string | string[], { market=this.defaultMarket } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/audiobooks`,
@@ -808,14 +852,14 @@ class SpotifyAPI
     * Get Spotify catalog information about an audiobook's chapters. Note: Audiobooks are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-audiobook-chapters Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the audiobook.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of chapters.
+    * @param id The Spotify URL or ID for the audiobook.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of chapters.
     */
-   getAudiobookChapters(id, { market=this.defaultMarket, limit, offset } = {})
+   getAudiobookChapters(id: string, { market=this.defaultMarket, limit, offset }: { market?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/audiobooks/${parseIDs(id)[0]}/chapters`,
@@ -830,12 +874,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object} opts Optional settings
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of audiobooks.
+    * @param opts Optional settings
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of audiobooks.
     */
-   getUserSavedAudiobooks({ limit, offset } = {})
+   getUserSavedAudiobooks({ limit, offset }: { limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/audiobooks`,
@@ -850,10 +894,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Audiobook(s) are saved to the library.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Audiobook(s) are saved to the library.
     */
-   saveAudiobooksForCurrentUser(ids)
+   saveAudiobooksForCurrentUser(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/audiobooks`,
@@ -868,10 +912,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Audiobook(s) have been removed from the library.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Audiobook(s) have been removed from the library.
     */
-   removeUserSavedAudiobooks(ids)
+   removeUserSavedAudiobooks(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/me/audiobooks`,
@@ -886,10 +930,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Array of booleans.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Array of booleans.
     */
-   checkUserSavedAudiobooks(ids)
+   checkUserSavedAudiobooks(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/audiobooks/contains`,
@@ -904,18 +948,17 @@ class SpotifyAPI
     * Get a list of categories used to tag items in Spotify (on, for example, the Spotify player's "Browse" tab).
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-categories Spotify API Reference}.
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
-    * @param {String=} opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} A paged set of categories.
+    * @param opts Optional settings
+    * @param opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns A paged set of categories.
     */
-   getSeveralBrowseCategories({ country, locale, limit, offset } = {})
+   getSeveralBrowseCategories({ locale, limit, offset }: { locale?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/browse/categories`,
-         query: { country: country, locale: locale, limit: limit, offset: offset }
+         query: { locale: locale, limit: limit, offset: offset }
       })
    }
 
@@ -923,17 +966,16 @@ class SpotifyAPI
     * Get a single category used to tag items in Spotify (on, for example, the Spotify player's "Browse" tab).
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-category Spotify API Reference}.
     *
-    * @param {String} category_id The Spotify category ID for the category.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
-    * @param {String=} opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
-    * @returns {Promise} A category.
+    * @param category_id The Spotify category ID for the category.
+    * @param opts Optional settings
+    * @param opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
+    * @returns A category.
     */
-   getSingleBrowseCategory(category_id, { country, locale } = {})
+   getSingleBrowseCategory(category_id: string, { locale }: { locale?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/browse/categories/${category_id}`,
-         query: { country: country, locale: locale }
+         query: { locale: locale }
       })
    }
 
@@ -944,12 +986,12 @@ class SpotifyAPI
     * Get Spotify catalog information for a single chapter. Note: Chapters are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-chapter Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the chapter.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A Chapter.
+    * @param id The Spotify URL or ID for the chapter.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A Chapter.
     */
-   getChapter(id, { market=this.defaultMarket } = {})
+   getChapter(id: string, { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/chapters/${parseIDs(id)[0]}`,
@@ -961,12 +1003,12 @@ class SpotifyAPI
     * Get Spotify catalog information for several chapters identified by their Spotify IDs. Note: Chapters are only available for the US, UK, Ireland, New Zealand and Australia markets.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-chapters Spotify API Reference}.
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A set of chapters.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A set of chapters.
     */
-   getSeveralChapters(ids, { market=this.defaultMarket } = {})
+   getSeveralChapters(ids: string | string[], { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/chapters`,
@@ -984,12 +1026,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-position"
     *
-    * @param {String} id The Spotify URL or ID for the episode.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} An episode.
+    * @param id The Spotify URL or ID for the episode.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns An episode.
     */
-   getEpisode(id, { market=this.defaultMarket } = {})
+   getEpisode(id: string, { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/episodes/${parseIDs(id)[0]}`,
@@ -1004,12 +1046,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-position"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the episodes. Maximum: 50 IDs.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A set of episodes.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the episodes. Maximum: 50 IDs.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A set of episodes.
     */
-   getSeveralEpisodes(ids, { market=this.defaultMarket } = {})
+   getSeveralEpisodes(ids: string | string[], { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/episodes`,
@@ -1025,13 +1067,13 @@ class SpotifyAPI
     * - "user-library-read"
     * - "user-read-playback-position"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of episodes.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of episodes.
     */
-   getUserSavedEpisodes({ market=this.defaultMarket, limit, offset } = {})
+   getUserSavedEpisodes({ market=this.defaultMarket, limit, offset }: { market?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/episodes`,
@@ -1046,14 +1088,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Episode saved.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Episode saved.
     */
-   saveEpisodesForCurrentUser(ids)
+   saveEpisodesForCurrentUser(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/episodes`,
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1064,14 +1106,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Episode removed.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Episode removed.
     */
-   removeEpisodesForCurrentUser(ids)
+   removeEpisodesForCurrentUser(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/me/episodes`,
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1082,10 +1124,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Array of booleans.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Array of booleans.
     */
-   checkEpisodesForCurrentUser(ids)
+   checkEpisodesForCurrentUser(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/episodes/contains`,
@@ -1100,9 +1142,9 @@ class SpotifyAPI
     * Retrieve a list of available genres seed parameter values for recommendations.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-recommendation-genres Spotify API Reference}.
     *
-    * @returns {Promise} A set of genres.
+    * @returns A set of genres.
     */
-   getAvailableGenreSeeds()
+   getAvailableGenreSeeds(): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/recommendations/available-genre-seeds`
@@ -1116,9 +1158,9 @@ class SpotifyAPI
     * Get the list of markets where Spotify is available.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-available-markets Spotify API Reference}.
     *
-    * @returns {Promise} A markets object with an array of country codes.
+    * @returns A markets object with an array of country codes.
     */
-   getAvailableMarkets()
+   getAvailableMarkets(): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/markets`
@@ -1135,16 +1177,16 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-state"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {String | Array<String>=} opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
-    * @returns {Promise} Information about playback.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
+    * @returns Information about playback.
     */
-   getPlaybackState({ market=this.defaultMarket, additional_types } = {})
+   getPlaybackState({ market=this.defaultMarket, additional_types }: { market?: string, additional_types?: string | string[] } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/player`,
-         query: { market: market, additional_types: additional_types?.join?.(",") ?? additional_types }
+         query: { market: market, additional_types: Array.isArray(additional_types) ? additional_types.join(",") : additional_types }
       })
    }
 
@@ -1155,12 +1197,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {String | Array<String>=} device_ids A string or an array containing the ID of the device on which playback should be started/transferred.
-    * @param {Object} opts Optional settings
-    * @param {Boolean=} opts.play Whether to ensure playback happens on new device. Otherwise keep the current playback state.
-    * @returns {Promise} Playback transferred.
+    * @param device_ids A string or an array containing the ID of the device on which playback should be started/transferred.
+    * @param opts Optional settings
+    * @param opts.play Whether to ensure playback happens on new device. Otherwise keep the current playback state.
+    * @returns Playback transferred.
     */
-   transferPlayback(device_ids, { play } = {})
+   transferPlayback(device_ids: string | string[], { play }: { play?: boolean } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/player`,
@@ -1175,9 +1217,9 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-state"
     *
-    * @returns {Promise} A set of devices.
+    * @returns A set of devices.
     */
-   getAvailableDevices()
+   getAvailableDevices(): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/player/devices`
@@ -1191,16 +1233,16 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-currently-playing"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {String | Array<String>=} opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
-    * @returns {Promise} Information about the currently playing track.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
+    * @returns Information about the currently playing track.
     */
-   getCurrentlyPlayingTrack({ market=this.defaultMarket, additional_types } = {})
+   getCurrentlyPlayingTrack({ market=this.defaultMarket, additional_types }: { market?: string, additional_types?: string | string[] } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/player/currently-playing`,
-         query: { market: market, additional_types: additional_types?.join?.(",") ?? additional_types }
+         query: { market: market, additional_types: Array.isArray(additional_types) ? additional_types.join(",") : additional_types }
       })
    }
 
@@ -1211,15 +1253,15 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @param {String=} opts.context_uri Spotify URL or URI of the context to play. Valid contexts are albums, artists & playlists.
-    * @param {String | Array<String>=} opts.uris A string or an array of the Spotify track URLs or URIs to play.
-    * @param {Object<Number, String>=} opts.offset Indicates from where in the context playback should start. Only available when context_uri corresponds to an album or playlist object "position" is zero based and can't be negative.
-    * @param {Number=} opts.position_ms The position in ms.
-    * @returns {Promise} Playback started.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @param opts.context_uri Spotify URL or URI of the context to play. Valid contexts are albums, artists & playlists.
+    * @param opts.uris A string or an array of the Spotify track URLs or URIs to play.
+    * @param opts.offset Indicates from where in the context playback should start. Only available when context_uri corresponds to an album or playlist object "position" is zero based and can't be negative.
+    * @param opts.position_ms The position in ms.
+    * @returns Playback started.
     */
-   startOrResumePlayback({ device_id, context_uri, uris, offset, position_ms } = {})
+   startOrResumePlayback({ device_id, context_uri, uris, offset, position_ms }: { device_id?: string, context_uri?: string, uris?: string | string[], offset?: { position: number, uri: string }, position_ms?: number } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/player/play`,
@@ -1235,11 +1277,11 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Playback paused.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Playback paused.
     */
-   pausePlayback({ device_id } = {})
+   pausePlayback({ device_id }: { device_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/player/pause`,
@@ -1254,11 +1296,11 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Command sent.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Command sent.
     */
-   skipToNext({ device_id } = {})
+   skipToNext({ device_id }: { device_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "POST", endpoint: `/me/player/next`,
@@ -1273,11 +1315,11 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Command sent.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Command sent.
     */
-   skipToPrevious({ device_id } = {})
+   skipToPrevious({ device_id }: { device_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "POST", endpoint: `/me/player/previous`,
@@ -1292,12 +1334,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Number} position_ms The position in milliseconds to seek to. Must be a positive number. Passing in a position that is greater than the length of the track will cause the player to start playing the next song.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Command sent.
+    * @param position_ms The position in milliseconds to seek to. Must be a positive number. Passing in a position that is greater than the length of the track will cause the player to start playing the next song.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Command sent.
     */
-   skipToPosition(position_ms, { device_id } = {})
+   skipToPosition(position_ms: number, { device_id }: { device_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/player/seek`,
@@ -1312,12 +1354,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {String} state If "track", will repeat the current track. If "context" will repeat the current context. If "off" will turn repeat off.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Command sent.
+    * @param state If "track", will repeat the current track. If "context" will repeat the current context. If "off" will turn repeat off.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Command sent.
     */
-   setRepeatMode(state, { device_id } = {})
+   setRepeatMode(state: string, { device_id }: { device_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/player/repeat`,
@@ -1332,12 +1374,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Number} volume_percent The volume to set. Must be a value from 0 to 100 inclusive.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Command sent.
+    * @param volume_percent The volume to set. Must be a value from 0 to 100 inclusive.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Command sent.
     */
-   setPlaybackVolume(volume_percent, { device_id } = {})
+   setPlaybackVolume(volume_percent: number, { device_id }: { device_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/player/volume`,
@@ -1352,12 +1394,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {Boolean} state Whether to shuffle user's playback.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Command sent.
+    * @param state Whether to shuffle user's playback.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Command sent.
     */
-   togglePlaybackShuffle(state, { device_id } = {})
+   togglePlaybackShuffle(state: string, { device_id }: { device_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/player/shuffle`,
@@ -1372,13 +1414,13 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-recently-played"
     *
-    * @param {Object} opts Optional settings
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.after A Unix timestamp in milliseconds. Returns all items after (but not including) this cursor position. If after is specified, before must not be specified.
-    * @param {Number=} opts.before A Unix timestamp in milliseconds. Returns all items before (but not including) this cursor position. If before is specified, after must not be specified.
-    * @returns {Promise} A paged set of tracks.
+    * @param opts Optional settings
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.after A Unix timestamp in milliseconds. Returns all items after (but not including) this cursor position. If after is specified, before must not be specified.
+    * @param opts.before A Unix timestamp in milliseconds. Returns all items before (but not including) this cursor position. If before is specified, after must not be specified.
+    * @returns A paged set of tracks.
     */
-   getRecentlyPlayedTracks({ limit, after, before } = {})
+   getRecentlyPlayedTracks({ limit, after, before }: { limit?: number, after?: number, before?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/player/recently-played`,
@@ -1393,9 +1435,9 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-read-playback-state"
     *
-    * @returns {Promise} Information about the queue.
+    * @returns Information about the queue.
     */
-   getUserQueue()
+   getUserQueue(): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/player/queue`
@@ -1409,12 +1451,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-modify-playback-state"
     *
-    * @param {String} uri The uri of the item to add to the queue. Must be a track or an episode uri.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
-    * @returns {Promise} Command received.
+    * @param uri The uri of the item to add to the queue. Must be a track or an episode uri.
+    * @param opts Optional settings
+    * @param opts.device_id The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+    * @returns Command received.
     */
-   addItemToPlaybackQueue(uri, { device_id } = {})
+   addItemToPlaybackQueue(uri: string, { device_id }: { device_id?: string } = {}): Promise<any>
    {
       try
       {
@@ -1435,18 +1477,18 @@ class SpotifyAPI
     * Get a playlist owned by a Spotify user.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-playlist Spotify API Reference}.
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {String | Array<String>=} opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
-    * @param {String | Array<String>=} opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
-    * @returns {Promise} A playlist.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
+    * @param opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
+    * @returns A playlist.
     */
-   getPlaylist(playlist_id, { market=this.defaultMarket, fields, additional_types } = {})
+   getPlaylist(playlist_id: string, { market=this.defaultMarket, fields, additional_types }: { market?: string, fields?: string, additional_types?: string | string[] } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}`,
-         query: { market: market, fields: fields?.join?.(",") ?? fields, additional_types: additional_types?.join?.(",") ?? additional_types }
+         query: { market: market, fields: fields, additional_types: Array.isArray(additional_types) ? additional_types.join(",") : additional_types }
       })
    }
 
@@ -1458,15 +1500,15 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.name The new name for the playlist.
-    * @param {Boolean=} opts.public_playlist Whether the playlist will be public.
-    * @param {Boolean=} opts.collaborative Whether the playlist will become collaborative and other users will be able to modify the playlist in their Spotify client.
-    * @param {String=} opts.description Value for playlist description as displayed in Spotify Clients and in the Web API.
-    * @returns {Promise} Playlist updated.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.name The new name for the playlist.
+    * @param opts.public_playlist Whether the playlist will be public.
+    * @param opts.collaborative Whether the playlist will become collaborative and other users will be able to modify the playlist in their Spotify client.
+    * @param opts.description Value for playlist description as displayed in Spotify Clients and in the Web API.
+    * @returns Playlist updated.
     */
-   changePlaylistDetails(playlist_id, { name, public_playlist, collaborative, description } = {})
+   changePlaylistDetails(playlist_id: string, { name, public_playlist, collaborative, description }: { name?: string, public_playlist?: boolean, collaborative?: boolean, description?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}`,
@@ -1481,20 +1523,20 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "playlist-read-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {String | Array<String>=} opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @param {String | Array<String>=} opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
-    * @returns {Promise} Pages of tracks.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.fields Filters for the query: a single string or an array of the fields to return. If omitted, all fields are returned.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @param opts.additional_types A single string or an array of item types that your client supports besides the default track type. Valid types are: track and episode.
+    * @returns Pages of tracks.
     */
-   getPlaylistItems(playlist_id, { market=this.defaultMarket, fields, limit, offset, additional_types } = {})
+   getPlaylistItems(playlist_id: string, { market=this.defaultMarket, fields, limit, offset, additional_types }: { market?: string, fields?: string, limit?: number, offset?: number, additional_types?: string | string[] } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
-         query: { market: market, fields: fields?.join?.(",") ?? fields, limit: limit, offset: offset, additional_types: additional_types?.join?.(",") ?? additional_types }
+         query: { market: market, fields: fields, limit: limit, offset: offset, additional_types: Array.isArray(additional_types) ? additional_types.join(",") : additional_types }
       })
    }
 
@@ -1506,16 +1548,16 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {String | Array<String>=} opts.uris A single string or an array of Spotify URLs or URIs to set, can be track or episode URIs.
-    * @param {Number=} opts.range_start The position of the first item to be reordered.
-    * @param {Number=} opts.insert_before The position where the items should be inserted. To reorder the items to the end of the playlist, simply set insert_before to the position after the last item.
-    * @param {Number=} opts.range_length The amount of items to be reordered. Defaults to 1 if not set. The range of items to be reordered begins from the range_start position, and includes the range_length subsequent items.
-    * @param {String=} opts.snapshot_id The playlist's snapshot ID against which you want to make the changes.
-    * @returns {Promise} A snapshot ID for the playlist.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.uris A single string or an array of Spotify URLs or URIs to set, can be track or episode URIs.
+    * @param opts.range_start The position of the first item to be reordered.
+    * @param opts.insert_before The position where the items should be inserted. To reorder the items to the end of the playlist, simply set insert_before to the position after the last item.
+    * @param opts.range_length The amount of items to be reordered. Defaults to 1 if not set. The range of items to be reordered begins from the range_start position, and includes the range_length subsequent items.
+    * @param opts.snapshot_id The playlist's snapshot ID against which you want to make the changes.
+    * @returns A snapshot ID for the playlist.
     */
-   updatePlaylistItems(playlist_id, { uris, range_start, insert_before, range_length, snapshot_id } = {})
+   updatePlaylistItems(playlist_id: string, { uris, range_start, insert_before, range_length, snapshot_id }: { uris?: string | string[], range_start?: number, insert_before?: number, range_length?: number, snapshot_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
@@ -1531,17 +1573,17 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {Number=} opts.position The position to insert the items, a zero-based index. If omitted, the items will be appended to the playlist.
-    * @param {String | Array<String>=} opts.uris A single string or an array of Spotify URLs or URIs to add, can be track or episode URIs.
-    * @returns {Promise} A snapshot ID for the playlist.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.position The position to insert the items, a zero-based index. If omitted, the items will be appended to the playlist.
+    * @param opts.uris A single string or an array of Spotify URLs or URIs to add, can be track or episode URIs.
+    * @returns A snapshot ID for the playlist.
     */
-   addItemsToPlaylist(playlist_id, { uris, position } = {})
+   addItemsToPlaylist(playlist_id: string, { position, uris }: { position?: number, uris?: string | string[] } = {}): Promise<any>
    {
       return this.request({
          method: "POST", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
-         body: { uris: parseURIs(uris), position: position }
+         body: { position: position, uris: parseURIs(uris) }
       })
    }
 
@@ -1553,13 +1595,13 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {Object} opts.tracks An object or an array of objects containing Spotify URIs of the tracks or episodes to remove.
-    * @param {String=} opts.snapshot_id The playlist's snapshot ID against which you want to make the changes.
-    * @returns {Promise} A snapshot ID for the playlist.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.tracks An object or an array of objects containing Spotify URIs of the tracks or episodes to remove.
+    * @param opts.snapshot_id The playlist's snapshot ID against which you want to make the changes.
+    * @returns A snapshot ID for the playlist.
     */
-   removePlaylistItems(playlist_id, { tracks, snapshot_id } = {})
+   removePlaylistItems(playlist_id: string, tracks: any[], { snapshot_id }: { snapshot_id?: string } = {}): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/tracks`,
@@ -1574,12 +1616,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "playlist-read-private"
     *
-    * @param {Object} opts Optional settings
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first playlist to return. Default: 0 (the first object). Maximum offset: 100.000. Use with limit to get the next set of playlists.
-    * @returns {Promise} A paged set of playlists.
+    * @param opts Optional settings
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first playlist to return. Default: 0 (the first object). Maximum offset: 100.000. Use with limit to get the next set of playlists.
+    * @returns A paged set of playlists.
     */
-   getCurrentUserPlaylists({ limit, offset } = {})
+   getCurrentUserPlaylists({ limit, offset }: { limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/playlists`,
@@ -1595,13 +1637,13 @@ class SpotifyAPI
     * - "playlist-read-private"
     * - "playlist-read-collaborative"
     *
-    * @param {String} user_id The user's Spotify user URL or ID.
-    * @param {Object} opts Optional settings
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first playlist to return. Default: 0 (the first object). Maximum offset: 100.000. Use with limit to get the next set of playlists.
-    * @returns {Promise} A paged set of playlists.
+    * @param user_id The user's Spotify user URL or ID.
+    * @param opts Optional settings
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first playlist to return. Default: 0 (the first object). Maximum offset: 100.000. Use with limit to get the next set of playlists.
+    * @returns A paged set of playlists.
     */
-   getUserPlaylist(user_id, { limit, offset } = {})
+   getUserPlaylist(user_id: string, { limit, offset }: { limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/users/${parseIDs(user_id)[0]}/playlists`,
@@ -1617,15 +1659,15 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} user_id The user's Spotify user URL or ID.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.name The name for the new playlist. This name does not need to be unique; a user may have several playlists with the same name.
-    * @param {Boolean=} opts.public_playlist Whether the playlist will be public.
-    * @param {Boolean=} opts.collaborative Whether the playlist will be collaborative.
-    * @param {String=} opts.description Value for playlist description as displayed in Spotify Clients and in the Web API.
-    * @returns {Promise} A playlist.
+    * @param user_id The user's Spotify user URL or ID.
+    * @param name The name for the new playlist. This name does not need to be unique; a user may have several playlists with the same name.
+    * @param opts Optional settings
+    * @param opts.public_playlist Whether the playlist will be public.
+    * @param opts.collaborative Whether the playlist will be collaborative.
+    * @param opts.description Value for playlist description as displayed in Spotify Clients and in the Web API.
+    * @returns A playlist.
     */
-   createPlaylist(user_id, { name, public_playlist, collaborative, description } = {})
+   createPlaylist(user_id: string, name: string, { public_playlist, collaborative, description }: { public_playlist?: boolean, collaborative?: boolean, description?: string } = {}): Promise<any>
    {
       return this.request({
          method: "POST", endpoint: `/users/${parseIDs(user_id)[0]}/playlists`,
@@ -1637,19 +1679,17 @@ class SpotifyAPI
     * Get a list of Spotify featured playlists (shown, for example, on a Spotify player's 'Browse' tab).
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-featured-playlists Spotify API Reference}.
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
-    * @param {String=} opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
-    * @param {String=} opts.timestamp A timestamp in ISO 8601 format: yyyy-MM-ddTHH:mm:ss. Use this parameter to specify the user's local time to get results tailored for that specific date and time in the day. If not provided, the response defaults to the current UTC time.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} A paged set of playlists.
+    * @param opts Optional settings
+    * @param opts.locale The desired language, consisting of an ISO 639-1 language code and an ISO 3166-1 alpha-2 country code, joined by an underscore.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns A paged set of playlists.
     */
-   getFeaturedPlaylists({ country, locale, timestamp, limit, offset } = {})
+   getFeaturedPlaylists({ locale, limit, offset }: { locale?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/browse/featured-playlists`,
-         query: { country: country, locale: locale, timestamp: timestamp, limit: limit, offset: offset }
+         query: { locale: locale, limit: limit, offset: offset }
       })
    }
 
@@ -1657,18 +1697,18 @@ class SpotifyAPI
     * Get a list of Spotify playlists tagged with a particular category.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-categories-playlists Spotify API Reference}.
     *
-    * @param {String} category_id The Spotify category URL or ID for the category.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.country An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} A paged set of playlists.
+    * @param category_id The Spotify category URL or ID for the category.
+    * @param opts Optional settings
+    * @param opts.country An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns A paged set of playlists.
     */
-   getCategoryPlaylists(category_id, { country, limit, offset } = {})
+   getCategoryPlaylists(category_id: string, { limit, offset }: { limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/browse/categories/${parseIDs(category_id)[0]}/playlists`,
-         query: { country: country, limit: limit, offset: offset }
+         query: { limit: limit, offset: offset }
       })
    }
 
@@ -1676,10 +1716,10 @@ class SpotifyAPI
     * Get the current image associated with a specific playlist.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-playlist-cover Spotify API Reference}.
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @returns {Promise} A set of images.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @returns A set of images.
     */
-   getPlaylistCoverImage(playlist_id)
+   getPlaylistCoverImage(playlist_id: string): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/images`
@@ -1695,14 +1735,14 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.image Base64 encoded JPEG image data, maximum payload size is 256 KB. You can obtain that by doing:
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.image Base64 encoded JPEG image data, maximum payload size is 256 KB. You can obtain that by doing:
     * @example fs.readFileSync("./path/to/image.jpeg", "base64")
     *
-    * @returns {Promise} Image uploaded.
+    * @returns Image uploaded.
     */
-   addCustomPlaylistCoverImage(playlist_id, { image } = {})
+   addCustomPlaylistCoverImage(playlist_id: string, { image }: { image?: string } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/images`,
@@ -1717,20 +1757,20 @@ class SpotifyAPI
     * Get Spotify catalog information about albums, artists, playlists, tracks, shows, episodes or audiobooks that match a keyword string.
     * {@link https://developer.spotify.com/documentation/web-api/reference/search Spotify API Reference}.
     *
-    * @param {String} q You can narrow down your search using field filters. The available filters are album, artist, track, year, upc, tag:hipster, tag:new, isrc, and genre. Each field filter only applies to certain result types.
-    * @param {String | Array<String>} type A single string or an array of item types to search across. Search results include hits from all the specified item types.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of results to return in each item type.
-    * @param {Number=} opts.offset The index of the first item to return. Use with limit to get the next page of search results.
-    * @param {String=} opts.include_external If "audio" it signals that the client can play externally hosted audio content, and marks the content as playable in the response.
-    * @returns {Promise} Search response.
+    * @param q You can narrow down your search using field filters. The available filters are album, artist, track, year, upc, tag:hipster, tag:new, isrc, and genre. Each field filter only applies to certain result types.
+    * @param type A single string or an array of item types to search across. Search results include hits from all the specified item types.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of results to return in each item type.
+    * @param opts.offset The index of the first item to return. Use with limit to get the next page of search results.
+    * @param opts.include_external If "audio" it signals that the client can play externally hosted audio content, and marks the content as playable in the response.
+    * @returns Search response.
     */
-   searchForItem(q, type, { market=this.defaultMarket, limit, offset, include_external } = {})
+   searchForItem(q: string, type: string | string[], { market=this.defaultMarket, limit, offset, include_external }: { market?: string, limit?: number, offset?: number, include_external?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/search`,
-         query: { q: q, type: type?.join?.(",") ?? type, market: market, limit: limit, offset: offset, include_external: include_external }
+         query: { q: q, type: Array.isArray(type) ? type.join(",") : type, market: market, limit: limit, offset: offset, include_external: include_external }
       })
    }
 
@@ -1741,12 +1781,12 @@ class SpotifyAPI
     * Get Spotify catalog information for a single show identified by its unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-show Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the show.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A show.
+    * @param id The Spotify URL or ID for the show.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A show.
     */
-   getShow(id, { market=this.defaultMarket } = {})
+   getShow(id: string, { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/shows/${parseIDs(id)[0]}`,
@@ -1758,12 +1798,12 @@ class SpotifyAPI
     * Get Spotify catalog information for several shows based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-multiple-shows Spotify API Reference}.
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A set of shows.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A set of shows.
     */
-   getSeveralShows(ids, { market=this.defaultMarket } = {})
+   getSeveralShows(ids: string | string[], { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/shows`,
@@ -1775,14 +1815,14 @@ class SpotifyAPI
     * Get Spotify catalog information about an show's episodes. Optional parameters can be used to limit the number of episodes returned.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-a-shows-episodes Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the show.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of episodes.
+    * @param id The Spotify URL or ID for the show.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of episodes.
     */
-   getShowEpisodes(id, { market=this.defaultMarket, limit, offset } = {})
+   getShowEpisodes(id: string, { market=this.defaultMarket, limit, offset }: { market?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/shows/${parseIDs(id)[0]}/episodes`,
@@ -1797,12 +1837,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object} opts Optional settings
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of shows.
+    * @param opts Optional settings
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of shows.
     */
-   getUserSavedShows({ limit, offset } = {})
+   getUserSavedShows({ limit, offset }: { limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/shows`,
@@ -1817,10 +1857,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
-    * @returns {Promise} Show saved.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
+    * @returns Show saved.
     */
-   saveShowsforCurrentUser(ids)
+   saveShowsforCurrentUser(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/shows`,
@@ -1835,12 +1875,12 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} Show removed.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns Show removed.
     */
-   removeUserSavedShows(ids, { market=this.defaultMarket } = {})
+   removeUserSavedShows(ids: string | string[], { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/me/shows`,
@@ -1855,10 +1895,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Array<String>} ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
-    * @returns {Promise} Array of booleans.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the shows. Maximum: 50 IDs.
+    * @returns Array of booleans.
     */
-   checkUserSavedShows(ids)
+   checkUserSavedShows(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/shows/contains`,
@@ -1873,12 +1913,12 @@ class SpotifyAPI
     * Get Spotify catalog information for a single track identified by its unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-track Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the track.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A track.
+    * @param id The Spotify URL or ID for the track.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A track.
     */
-   getTrack(id, { market=this.defaultMarket } = {})
+   getTrack(id: string, { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/tracks/${parseIDs(id)[0]}`,
@@ -1890,12 +1930,12 @@ class SpotifyAPI
     * Get Spotify catalog information for multiple tracks based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-tracks Spotify API Reference}.
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @returns {Promise} A set of tracks.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @returns A set of tracks.
     */
-   getSeveralTracks(ids, { market=this.defaultMarket } = {})
+   getSeveralTracks(ids: string | string[], { market=this.defaultMarket }: { market?: string } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/tracks`,
@@ -1910,13 +1950,13 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of tracks.
+    * @param opts Optional settings
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of tracks.
     */
-   getUserSavedTracks({ market=this.defaultMarket, limit, offset } = {})
+   getUserSavedTracks({ market=this.defaultMarket, limit, offset }: { market?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/tracks`,
@@ -1931,14 +1971,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Track saved.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Track saved.
     */
-   saveTracksForCurrentUser(ids)
+   saveTracksForCurrentUser(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/tracks`,
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1949,14 +1989,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Track removed.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Track removed.
     */
-   removeUserSavedTracks(ids)
+   removeUserSavedTracks(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/me/tracks`,
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -1967,10 +2007,10 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-library-read"
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
-    * @returns {Promise} Array of booleans.
+    * @param ids A single string or an array of the Spotify URLs or IDs. Maximum: 50 IDs.
+    * @returns Array of booleans.
     */
-   checkUserSavedTracks(ids)
+   checkUserSavedTracks(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/tracks/contains`,
@@ -1982,10 +2022,10 @@ class SpotifyAPI
     * Get audio features for multiple tracks based on their Spotify IDs.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-several-audio-features Spotify API Reference}.
     *
-    * @param {String | Array<String>} ids A single string or an array of the Spotify URLs or IDs for the tracks. Maximum: 100 IDs.
-    * @returns {Promise} A set of audio features.
+    * @param ids A single string or an array of the Spotify URLs or IDs for the tracks. Maximum: 100 IDs.
+    * @returns A set of audio features.
     */
-   getTracksAudioFeatures(ids)
+   getTracksAudioFeatures(ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/audio-features`,
@@ -1997,10 +2037,10 @@ class SpotifyAPI
     * Get audio feature information for a single track identified by its unique Spotify ID.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-audio-features Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the track.
-    * @returns {Promise} Audio features for one track.
+    * @param id The Spotify URL or ID for the track.
+    * @returns Audio features for one track.
     */
-   getTrackAudioFeatures(id)
+   getTrackAudioFeatures(id: string): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/audio-features/${parseIDs(id)[0]}`
@@ -2011,10 +2051,10 @@ class SpotifyAPI
     * Get a low-level audio analysis for a track in the Spotify catalog. The audio analysis describes the track's structure and musical content, including rhythm, pitch, and timbre.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-audio-analysis Spotify API Reference}.
     *
-    * @param {String} id The Spotify URL or ID for the track.
-    * @returns {Promise} Audio analysis for one track.
+    * @param id The Spotify URL or ID for the track.
+    * @returns Audio analysis for one track.
     */
-   getTrackAudioAnalysis(id)
+   getTrackAudioAnalysis(id: string): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/audio-analysis/${parseIDs(id)[0]}`
@@ -2025,73 +2065,74 @@ class SpotifyAPI
     * Recommendations are generated based on the available information for a given seed entity and matched against similar artists and tracks. If there is sufficient information about the provided seeds, a list of tracks will be returned together with pool size details.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-recommendations Spotify API Reference}.
     *
-    * @param {String} seed_artists An array of Spotify IDs for seed artists.
-    * @param {String} seed_genres An array of any genres in the set of available genre seeds.
-    * @param {String} seed_tracks An array of Spotify IDs for a seed track.
+    * @param opts See the {@link https://developer.spotify.com/documentation/web-api/reference/get-recommendations Spotify API Reference} for a full list of all the remaining options
+    * @param opts.seed_artists An array of Spotify IDs for seed artists.
+    * @param opts.seed_genres An array of any genres in the set of available genre seeds.
+    * @param opts.seed_tracks An array of Spotify IDs for a seed track.
     *
-    * @param {Object} opts See the {@link https://developer.spotify.com/documentation/web-api/reference/get-recommendations Spotify API Reference} for a full list of all the remaining options
-    * @param {String=} opts.market An ISO 3166-1 alpha-2 country code.
-    * @param {Number=} opts.limit The target size of the list of recommended tracks. Default: 20. Minimum: 1. Maximum: 100.
+    * @param opts.market An ISO 3166-1 alpha-2 country code.
+    * @param opts.limit The target size of the list of recommended tracks. Default: 20. Minimum: 1. Maximum: 100.
     *
-    * @param {Number=} opts.min_acousticness
-    * @param {Number=} opts.max_acousticness
-    * @param {Number=} opts.target_acousticness
+    * @param opts.min_acousticness
+    * @param opts.max_acousticness
+    * @param opts.target_acousticness
     *
-    * @param {Number=} opts.min_danceability
-    * @param {Number=} opts.max_danceability
-    * @param {Number=} opts.target_danceability
+    * @param opts.min_danceability
+    * @param opts.max_danceability
+    * @param opts.target_danceability
     *
-    * @param {Number=} opts.min_duration_ms
-    * @param {Number=} opts.max_duration_ms
-    * @param {Number=} opts.target_duration_ms
+    * @param opts.min_duration_ms
+    * @param opts.max_duration_ms
+    * @param opts.target_duration_ms
     *
-    * @param {Number=} opts.min_energy
-    * @param {Number=} opts.max_energy
-    * @param {Number=} opts.target_energy
+    * @param opts.min_energy
+    * @param opts.max_energy
+    * @param opts.target_energy
     *
-    * @param {Number=} opts.min_instrumentalness
-    * @param {Number=} opts.max_instrumentalness
-    * @param {Number=} opts.target_instrumentalness
+    * @param opts.min_instrumentalness
+    * @param opts.max_instrumentalness
+    * @param opts.target_instrumentalness
     *
-    * @param {Number=} opts.min_key
-    * @param {Number=} opts.max_key
-    * @param {Number=} opts.target_key
+    * @param opts.min_key
+    * @param opts.max_key
+    * @param opts.target_key
     *
-    * @param {Number=} opts.min_liveness
-    * @param {Number=} opts.max_liveness
-    * @param {Number=} opts.target_liveness
+    * @param opts.min_liveness
+    * @param opts.max_liveness
+    * @param opts.target_liveness
     *
-    * @param {Number=} opts.min_loudness
-    * @param {Number=} opts.max_loudness
-    * @param {Number=} opts.target_loudness
+    * @param opts.min_loudness
+    * @param opts.max_loudness
+    * @param opts.target_loudness
     *
-    * @param {Number=} opts.min_mode
-    * @param {Number=} opts.max_mode
-    * @param {Number=} opts.target_mode
+    * @param opts.min_mode
+    * @param opts.max_mode
+    * @param opts.target_mode
     *
-    * @param {Number=} opts.min_popularity
-    * @param {Number=} opts.max_popularity
-    * @param {Number=} opts.target_popularity
+    * @param opts.min_popularity
+    * @param opts.max_popularity
+    * @param opts.target_popularity
     *
-    * @param {Number=} opts.min_speechiness
-    * @param {Number=} opts.max_speechiness
-    * @param {Number=} opts.target_speechiness
+    * @param opts.min_speechiness
+    * @param opts.max_speechiness
+    * @param opts.target_speechiness
     *
-    * @param {Number=} opts.min_tempo
-    * @param {Number=} opts.max_tempo
-    * @param {Number=} opts.target_tempo
+    * @param opts.min_tempo
+    * @param opts.max_tempo
+    * @param opts.target_tempo
     *
-    * @param {Number=} opts.min_time_signature
-    * @param {Number=} opts.max_time_signature
-    * @param {Number=} opts.target_time_signature
+    * @param opts.min_time_signature
+    * @param opts.max_time_signature
+    * @param opts.target_time_signature
     *
-    * @param {Number=} opts.min_valence
-    * @param {Number=} opts.max_valence
-    * @param {Number=} opts.target_valence
+    * @param opts.min_valence
+    * @param opts.max_valence
+    * @param opts.target_valence
     *
-    * @returns {Promise} A set of recommendations.
+    * @returns A set of recommendations.
     */
-   getRecommendations(seed_artists, seed_genres, seed_tracks, {
+   getRecommendations({
+      seed_artists, seed_genres, seed_tracks,
       limit, market=this.defaultMarket,
       min_acousticness, max_acousticness, target_acousticness,
       min_danceability, max_danceability, target_danceability,
@@ -2107,11 +2148,28 @@ class SpotifyAPI
       min_tempo, max_tempo, target_tempo,
       min_time_signature, max_time_signature, target_time_signature,
       min_valence, max_valence, target_valence
-   })
+   }: {
+      seed_artists?: string[], seed_genres?: string[], seed_tracks?: string[],
+      limit?: number, market?: string,
+      min_acousticness?: number, max_acousticness?: number, target_acousticness?: number,
+      min_danceability?: number, max_danceability?: number, target_danceability?: number,
+      min_duration_ms?: number, max_duration_ms?: number, target_duration_ms?: number,
+      min_energy?: number, max_energy?: number, target_energy?: number,
+      min_instrumentalness?: number, max_instrumentalness?: number, target_instrumentalness?: number,
+      min_key?: number, max_key?: number, target_key?: number,
+      min_liveness?: number, max_liveness?: number, target_liveness?: number,
+      min_loudness?: number, max_loudness?: number, target_loudness?: number,
+      min_mode?: number, max_mode?: number, target_mode?: number,
+      min_popularity?: number, max_popularity?: number, target_popularity?: number,
+      min_speechiness?: number, max_speechiness?: number, target_speechiness?: number,
+      min_tempo?: number, max_tempo?: number, target_tempo?: number,
+      min_time_signature?: number, max_time_signature?: number, target_time_signature?: number,
+      min_valence?: number, max_valence?: number, target_valence?: number
+   }): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/recommendations`,
-         query: {seed_artists: seed_artists, seed_genres: seed_genres, seed_tracks: seed_tracks, ...arguments[arguments.length - 1]}
+         query: arguments[0]
       })
    }
 
@@ -2126,9 +2184,9 @@ class SpotifyAPI
     * - "user-read-private"
     * - "user-read-email"
     *
-    * @returns {Promise} A user.
+    * @returns A user.
     */
-   getCurrentUserProfile()
+   getCurrentUserProfile(): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me`
@@ -2142,14 +2200,14 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-top-read"
     *
-    * @param {String} type The type of entity to return. Valid values: "artists" or "tracks"
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.time_range Over what time frame the affinities are computed. Valid values: "long_term"," medium_term", "short_term".
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @param {Number=} opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
-    * @returns {Promise} Pages of artists or tracks.
+    * @param type The type of entity to return. Valid values: "artists" or "tracks"
+    * @param opts Optional settings
+    * @param opts.time_range Over what time frame the affinities are computed. Valid values: "long_term"," medium_term", "short_term".
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @param opts.offset The index of the first item to return. Default: 0 (the first item). Use with limit to get the next set of items.
+    * @returns Pages of artists or tracks.
     */
-   getUserTopItems(type, { time_range, limit, offset } = {})
+   getUserTopItems(type: string, { time_range, limit, offset }: { time_range?: string, limit?: number, offset?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/top/${type}`,
@@ -2161,10 +2219,10 @@ class SpotifyAPI
     * Get public profile information about a Spotify user.
     * {@link https://developer.spotify.com/documentation/web-api/reference/get-users-profile Spotify API Reference}.
     *
-    * @param {String} user_id The user's Spotify user URL or ID.
-    * @returns {Promise} A user.
+    * @param user_id The user's Spotify user URL or ID.
+    * @returns A user.
     */
-   getUserProfile(user_id)
+   getUserProfile(user_id: string): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/users/${parseIDs(user_id)[0]}`
@@ -2179,12 +2237,12 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {Object} opts Optional settings
-    * @param {Boolean=} opts.public_playlist Whether to include the playlist in user's public playlists.
-    * @returns {Promise} Playlist followed.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param opts Optional settings
+    * @param opts.public_playlist Whether to include the playlist in user's public playlists.
+    * @returns Playlist followed.
     */
-   followPlaylist(playlist_id, { public_playlist } = {})
+   followPlaylist(playlist_id: string, { public_playlist }: { public_playlist?: boolean } = {}): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/followers`,
@@ -2200,10 +2258,10 @@ class SpotifyAPI
     * - "playlist-modify-public"
     * - "playlist-modify-private"
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @returns {Promise} Playlist unfollowed.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @returns Playlist unfollowed.
     */
-   unfollowPlaylist(playlist_id)
+   unfollowPlaylist(playlist_id: string): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/followers`
@@ -2217,17 +2275,17 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-follow-read"
     *
-    * @param {String} type The ID type: currently only "artist" is supported.
-    * @param {Object} opts Optional settings
-    * @param {String=} opts.after The last artist URL or ID retrieved from the previous request.
-    * @param {Number=} opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
-    * @returns {Promise} A paged set of artists.
+    * @param type The ID type: currently only "artist" is supported.
+    * @param opts Optional settings
+    * @param opts.after The last artist URL or ID retrieved from the previous request.
+    * @param opts.limit The maximum number of items to return. Default: 20. Minimum: 1. Maximum: 50.
+    * @returns A paged set of artists.
     */
-   getFollowedArtists(type, { after, limit } = {})
+   getFollowedArtists(type: string, { after, limit }: { after?: string, limit?: number } = {}): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/following`,
-         query: { type: type, after: parseIDs(after)[0], limit: limit }
+         query: { type: type, after: after ? parseIDs(after)?.[0] : after, limit: limit }
       })
    }
 
@@ -2238,16 +2296,16 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-follow-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the artist or user Spotify URLs or IDs.
-    * @param {String} type The ID type.
-    * @returns {Promise} Artist or user followed.
+    * @param ids A single string or an array of the artist or user Spotify URLs or IDs.
+    * @param type The ID type.
+    * @returns Artist or user followed.
     */
-   followArtistsOrUsers(ids, type)
+   followArtistsOrUsers(ids: string | string[], type: string): Promise<any>
    {
       return this.request({
          method: "PUT", endpoint: `/me/following`,
          query: { type: type },
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -2258,16 +2316,16 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-follow-modify"
     *
-    * @param {String | Array<String>} ids A single string or an array of the artist or user Spotify URLs or IDs.
-    * @param {String} type The ID type: either "artist" or "user".
-    * @returns {Promise} Artist or user unfollowed.
+    * @param ids A single string or an array of the artist or user Spotify URLs or IDs.
+    * @param type The ID type: either "artist" or "user".
+    * @returns Artist or user unfollowed.
     */
-   unfollowArtistsOrUsers(ids, type)
+   unfollowArtistsOrUsers(ids: string | string[], type: string): Promise<any>
    {
       return this.request({
          method: "DELETE", endpoint: `/me/following`,
          query: { type: type },
-         body: { ids: parseIDs(ids) }
+         body: { ids: parseIDs(ids).join(",") }
       })
    }
 
@@ -2278,11 +2336,11 @@ class SpotifyAPI
     * Might require the following authorization scopes:
     * - "user-follow-read"
     *
-    * @param {String | Array<String>} ids A single string or an array of the artist or the user Spotify URLs or IDs to check.
-    * @param {String} type The ID type: either "artist" or "user".
-    * @returns {Promise} Array of booleans.
+    * @param ids A single string or an array of the artist or the user Spotify URLs or IDs to check.
+    * @param type The ID type: either "artist" or "user".
+    * @returns Array of booleans.
     */
-   checkIfUserFollowsArtistsOrUsers(ids, type)
+   checkIfUserFollowsArtistsOrUsers(ids: string | string[], type: string): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/me/following/contains`,
@@ -2294,11 +2352,11 @@ class SpotifyAPI
     * Check to see if one or more Spotify users are following a specified playlist.
     * {@link https://developer.spotify.com/documentation/web-api/reference/check-if-user-follows-playlist Spotify API Reference}.
     *
-    * @param {String} playlist_id The Spotify URL or ID of the playlist.
-    * @param {String} ids An array of the Spotify User URLs or IDs that you want to check to see if they follow the playlist. Maximum: 5 ids.
-    * @returns {Promise} Array of booleans.
+    * @param playlist_id The Spotify URL or ID of the playlist.
+    * @param ids An array of the Spotify User URLs or IDs that you want to check to see if they follow the playlist. Maximum: 5 ids.
+    * @returns Array of booleans.
     */
-   checkIfUsersFollowPlaylist(playlist_id, ids)
+   checkIfUsersFollowPlaylist(playlist_id: string, ids: string | string[]): Promise<any>
    {
       return this.request({
          method: "GET", endpoint: `/playlists/${parseIDs(playlist_id)[0]}/followers/contains`,
@@ -2311,10 +2369,10 @@ class SpotifyAPI
 
    /**
     * Shorthand for calling the {@link searchForItem} method with type track and limit 1, then returning the track item.
-    * @param {String} q You can narrow down your search using field filters. The available filters are album, artist, track, year, upc, tag:hipster, tag:new, isrc, and genre. Each field filter only applies to certain result types.
-    * @returns {Promise} Search response.
+    * @param q You can narrow down your search using field filters. The available filters are album, artist, track, year, upc, tag:hipster, tag:new, isrc, and genre. Each field filter only applies to certain result types.
+    * @returns Search response.
     */
-   async searchTrack(q)
+   async searchTrack(q: string): Promise<any>
    {
       return this.searchForItem(q, "track", { limit: 1 })
    }
@@ -2333,10 +2391,10 @@ class SpotifyAPI
     * - If "track", returns {@link getTrack}(id)
     * - If "user", returns {@link getUserSavedTracks}(id)
     *
-    * @param {String} q Either a search query or a Spotify URL
-    * @returns {Promise} Magic response (see above).
+    * @param q Either a search query or a Spotify URL
+    * @returns Magic response (see above).
     */
-   getMagic(q)
+   getMagic(q: string): Promise<any>
    {
       if (SpotifyAPI.isValidURL(q))
       {
@@ -2361,7 +2419,7 @@ class SpotifyAPI
 }
 
 
-function generateRandomString(length)
+function generateRandomString(length: number): string
 {
    let text = "";
    let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -2373,7 +2431,7 @@ function generateRandomString(length)
 
    return text;
 }
-function createPostRequest(body)
+function createPostRequest(body: any): any
 {
    return {
       method: "POST",
@@ -2381,10 +2439,19 @@ function createPostRequest(body)
       body: queryFromObject(body)
    }
 }
-function getAuthURL(response_type, client_id, redirect_uri, {scope=[], show_dialog=false, code_challenge=undefined}={})
+function getAuthURL(response_type: string, client_id: string, redirect_uri: string, { scope=[], show_dialog=false, code_challenge=undefined }: { scope?: string[], show_dialog?: boolean, code_challenge?: string } = {}): string
 {
-   let query =
+   let query:
    {
+      client_id: string,
+      response_type: string,
+      redirect_uri: string,
+      state: string,
+      scope: string,
+      show_dialog: boolean,
+      code_challenge_method?: string,
+      code_challenge?: string
+   } = {
       client_id: client_id,
       response_type: response_type,
       redirect_uri: redirect_uri,
@@ -2402,18 +2469,18 @@ function getAuthURL(response_type, client_id, redirect_uri, {scope=[], show_dial
    return `https://accounts.spotify.com/authorize?${queryFromObject(query)}`
 }
 
-function queryFromObject(obj)
+function queryFromObject(obj: any): string
 {
    Object.keys(obj).forEach(key => obj[key] === undefined && delete obj[key])
 
    return new URLSearchParams(obj).toString()
 }
-function objectFromQuery(query)
+function objectFromQuery(query: string): any
 {
    return Object.fromEntries(new URLSearchParams(query).entries());
 }
 
-function parseIDs(ids)
+function parseIDs(ids: string | string[]): string[]
 {
    return [ids].flat().map(id =>
    {
@@ -2421,13 +2488,14 @@ function parseIDs(ids)
       catch { return id }
    })
 }
-function parseURIs(uris)
+function parseURIs(uris?: string | string[]): string[] | undefined
 {
-   return [uris].flat().map(uri =>
+   return uris ? [uris].flat().map(uri =>
    {
       try { return SpotifyAPI.parseURL(uri).uri }
       catch { return uri }
-   })
+   }) : undefined
 }
 
-module.exports = SpotifyAPI
+
+export = SpotifyAPI
