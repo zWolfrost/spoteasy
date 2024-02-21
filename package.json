@@ -1,6 +1,6 @@
 {
   "name": "spoteasy",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "An easy-to-use zero-dependencies node.js wrapper for the Spotify API",
   "main": "dist/spoteasy.js",
   "types": "dist/spoteasy.d.ts",
